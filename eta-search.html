@@ -90,13 +90,12 @@
   .step p{margin:0;color:var(--slate);font-size:14.5px;max-width:520px;}
 
   /* WHO AM I */
-  .who-grid{display:grid;grid-template-columns:200px 1fr;gap:48px;align-items:start;}
-  .who-photo{text-align:center;}
-  .who-photo img{width:170px;height:170px;object-fit:cover;border-radius:6px;box-shadow:0 1px 3px rgba(18,33,59,0.1);}
-  .who-name{font-family:var(--serif);font-size:19px;font-weight:600;margin-top:16px;}
+  .who-header{display:flex;align-items:center;gap:28px;margin-bottom:32px;padding-bottom:28px;border-bottom:1px solid var(--hairline);}
+  .who-photo-img{width:110px;height:110px;object-fit:cover;border-radius:6px;box-shadow:0 1px 3px rgba(18,33,59,0.1);flex-shrink:0;}
+  .who-name{font-family:var(--serif);font-size:22px;font-weight:600;color:var(--ink);}
   .who-linkedin{display:inline-block;margin-top:6px;font-size:12.5px;color:var(--slate);text-decoration:none;border-bottom:1px solid var(--hairline);padding-bottom:1px;}
   .who-linkedin:hover{color:var(--brass);border-color:var(--brass);}
-  .who-bio p{color:var(--ink-2);font-size:15.5px;margin-bottom:16px;}
+  .who-bio p{color:var(--ink-2);font-size:15.5px;margin-bottom:16px;max-width:720px;}
 
   /* CRITERIA CHIPS */
   .chip-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
@@ -171,8 +170,8 @@
   footer{padding:36px 32px;text-align:center;font-size:12.5px;color:var(--slate);}
 
   @media(max-width:760px){
-    .about-grid,.contact-grid,.who-grid{grid-template-columns:1fr;}
-    .who-photo{text-align:left;}
+    .about-grid,.contact-grid{grid-template-columns:1fr;}
+    .who-header{flex-direction:column;align-items:flex-start;}
     h1{font-size:32px;}
     .step{grid-template-columns:44px 1fr;}
   }
@@ -282,17 +281,17 @@
       <div class="kicker">Who Am I</div>
       <h2>The person behind the search</h2>
     </div>
-    <div class="who-grid">
-      <div class="who-photo">
-        <img src="headshot.jpg" alt="Shafiq Vallani">
+    <div class="who-header">
+      <img class="who-photo-img" src="headshot.jpg" alt="Shafiq Vallani">
+      <div>
         <div class="who-name">Shafiq Vallani</div>
         <a class="who-linkedin" href="https://www.linkedin.com/in/shafiqvallani" target="_blank" rel="noopener">LinkedIn ↗</a>
       </div>
-      <div class="who-bio">
-        <p>Shafiq's path to buying a business started well before adolescence. His grandfather immigrated to Canada in the 1970s and built a blue-collar hardware and lumber business from scratch. Shafiq spent much of his childhood running around the store and yard, watching what ownership actually looked like up close: the grind of it, but also the pride that comes along with it — employees building careers and families and customers who kept coming back because they were known by name.</p>
-        <p>Since then, Shafiq has started, invested in, and advised dozens of businesses, gaining immense tuition-value across venture capital (TELUS Global Ventures, Redesign Health), buy-side M&amp;A (RBC Ventures), and operations in manufacturing and in consulting with Carpedia International and BDC. He's built capital markets experience at Red Cloud Securities and League Assets, and founded Gryphon Sports Management and ISBY.</p>
-        <p>Outside of work, he stays active across cycling, tennis, and hockey.</p>
-      </div>
+    </div>
+    <div class="who-bio">
+      <p>Shafiq's path to buying a business started well before adolescence. His grandfather immigrated to Canada in the 1970s and built a blue-collar hardware and lumber business from scratch. Shafiq spent much of his childhood running around the store and yard, watching what ownership actually looked like up close: the grind of it, but also the pride that comes along with it — employees building careers and families and customers who kept coming back because they were known by name.</p>
+      <p>Since then, Shafiq has started, invested in, and advised dozens of businesses, gaining immense tuition-value across venture capital (TELUS Global Ventures, Redesign Health), buy-side M&amp;A (RBC Ventures), and operations in manufacturing and in consulting with Carpedia International and BDC. He's built capital markets experience at Red Cloud Securities and League Assets, and founded Gryphon Sports Management and ISBY.</p>
+      <p>Outside of work, he stays active across cycling, tennis, and hockey.</p>
     </div>
   </div>
 </section>
