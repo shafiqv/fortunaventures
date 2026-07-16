@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortuna Ventures</title>
+<style>
+  :root{
+    --ink:#12213B; --ink-2:#1B2D4D; --ivory:#F7F5F0; --paper:#FFFFFF;
+    --brass:#A8823C; --brass-light:#C9A868; --slate:#5B6472; --hairline:#D8D2C4;
+    --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    --sans:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;background:var(--ink);color:var(--ivory);font-family:var(--sans);line-height:1.55;
+       display:flex;flex-direction:column;min-height:100vh;position:relative;overflow-x:hidden;}
+  body::after{content:"";position:absolute;right:-160px;top:-160px;width:520px;height:520px;border-radius:50%;
+       border:1px solid rgba(201,168,104,0.14);pointer-events:none;}
+  body::before{content:"";position:absolute;right:-70px;top:-70px;width:340px;height:340px;border-radius:50%;
+       border:1px solid rgba(201,168,104,0.22);pointer-events:none;}
+
+  header{text-align:center;padding:80px 32px 20px;position:relative;z-index:2;}
+  .mark{font-family:var(--serif);font-size:15px;letter-spacing:0.28em;text-transform:uppercase;color:var(--brass-light);margin-bottom:26px;}
+  h1{font-family:var(--serif);font-weight:500;font-size:42px;margin:0 auto 16px;max-width:640px;}
+  header p{color:#C9CDD8;font-size:16px;max-width:480px;margin:0 auto;}
+
+  main{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 32px 80px;position:relative;z-index:2;}
+  .options{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:1040px;width:100%;}
+
+  .option{
+    background:rgba(247,245,240,0.04);
+    border:1px solid rgba(247,245,240,0.14);
+    border-radius:6px;
+    padding:36px 28px;
+    text-decoration:none;
+    color:var(--ivory);
+    display:flex;
+    flex-direction:column;
+    transition:border-color .18s ease, background .18s ease, transform .18s ease;
+    min-height:230px;
+  }
+  .option:hover{border-color:var(--brass-light);background:rgba(247,245,240,0.07);transform:translateY(-2px);}
+  .option .num{font-family:var(--serif);font-size:13px;color:var(--brass-light);letter-spacing:0.1em;margin-bottom:22px;}
+  .option h2{font-family:var(--serif);font-weight:500;font-size:22px;margin:0 0 12px;}
+  .option p{color:#B9BFCC;font-size:14px;margin:0 0 auto;flex:1;}
+  .option .go{font-size:13px;color:var(--brass-light);font-weight:600;margin-top:20px;display:flex;align-items:center;gap:6px;}
+  .option .go svg{width:14px;height:14px;transition:transform .18s ease;}
+  .option:hover .go svg{transform:translateX(3px);}
+
+  footer{text-align:center;padding:28px 32px;font-size:12.5px;color:#8891A3;position:relative;z-index:2;}
+
+  @media(max-width:840px){
+    .options{grid-template-columns:1fr;max-width:420px;}
+    h1{font-size:32px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">Fortuna Ventures</div>
+  <h1>Building, backing, and buying great businesses.</h1>
+  <p>A holding company for a single acquisition, a portfolio of early-stage investments, and the operator behind both.</p>
+</header>
+
+<main>
+  <div class="options">
+    <a class="option" href="eta-search.html">
+      <div class="num">01</div>
+      <h2>ETA Search</h2>
+      <p>Acquiring a profitable B2B services business in the Greater Toronto Area — and stepping in full-time as CEO.</p>
+      <div class="go">Enter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    </a>
+
+    <a class="option" href="https://www.linkedin.com/in/shafiqvallani" target="_blank" rel="noopener">
+      <div class="num">02</div>
+      <h2>About Shafiq</h2>
+      <p>Background, operating experience, and track record across M&amp;A, capital markets, and founding companies.</p>
+      <div class="go">View on LinkedIn <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    </a>
+
+    <a class="option" href="portfolio.html">
+      <div class="num">03</div>
+      <h2>Portfolio</h2>
+      <p>Startups and investments backed by Fortuna Ventures.</p>
+      <div class="go">Enter <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    </a>
+  </div>
+</main>
+
+<footer>Fortuna Ventures · Toronto, ON</footer>
+
+</body>
+</html>
