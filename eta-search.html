@@ -30,7 +30,8 @@
   nav{display:flex;justify-content:space-between;align-items:center;padding:26px 32px;max-width:1040px;margin:0 auto;}
   .brand{font-family:var(--serif);font-size:20px;letter-spacing:0.02em;font-weight:600;}
   .brand span{color:var(--brass);}
-  nav .links a{margin-left:28px;font-size:14px;text-decoration:none;color:var(--ink);border-bottom:1px solid transparent;padding-bottom:2px;}
+  nav .links{display:flex;align-items:center;flex-wrap:nowrap;}
+  nav .links a{margin-left:28px;font-size:14px;text-decoration:none;color:var(--ink);border-bottom:1px solid transparent;padding-bottom:2px;white-space:nowrap;}
   nav .links a:hover{border-color:var(--brass);}
   nav .links a.home-icon{margin-left:28px;padding-bottom:0;border-bottom:none;display:flex;align-items:center;color:var(--slate);}
   nav .links a.home-icon svg{width:18px;height:18px;}
@@ -65,6 +66,10 @@
   .credentials .cred-item{margin-bottom:16px;}
   .credentials .cred-item .label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--slate);margin-bottom:3px;}
   .credentials .cred-item .val{font-family:var(--serif);font-size:16px;}
+  .logo-strip{margin-top:28px;padding-top:22px;border-top:1px solid var(--hairline);}
+  .logo-strip-label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--slate);margin-bottom:12px;}
+  .logo-strip-row{display:flex;flex-wrap:wrap;gap:20px 28px;align-items:center;}
+  .logo-mark{font-family:var(--serif);font-size:14px;color:var(--slate);letter-spacing:0.02em;opacity:0.75;}
 
   /* TERM SHEET CARD */
   .termsheet{background:var(--paper);border:1px solid var(--hairline);border-radius:4px;overflow:hidden;box-shadow:0 1px 3px rgba(18,33,59,0.06);}
@@ -152,7 +157,7 @@
   .booking-card{background:rgba(247,245,240,0.05);border:1px solid rgba(247,245,240,0.15);border-radius:4px;padding:28px;}
   .booking-card h3{font-family:var(--serif);font-size:18px;margin:0 0 10px;}
   .booking-card p{color:#B9BFCC;font-size:14px;margin-bottom:18px;}
-  .calendly-embed{background:#fff;border-radius:3px;min-height:340px;display:flex;align-items:center;justify-content:center;color:#8891A3;font-size:13px;text-align:center;padding:20px;}
+  .calendly-inline-widget{border-radius:3px;overflow:hidden;}
 
   footer{padding:36px 32px;text-align:center;font-size:12.5px;color:var(--slate);}
 
@@ -182,7 +187,7 @@
   <div class="hero-inner">
     <div class="eyebrow">Entrepreneurship Through Acquisition</div>
     <h1>Acquiring one profitable GTA business. Operating it for the next decade.</h1>
-    <p class="lead">Fortuna Ventures is a self-funded search backed by institutional capital, looking to acquire a single well-run B2B services business in the Greater Toronto Area — and step in full-time as CEO.</p>
+    <p class="lead">Fortuna Ventures is a self-funded search to acquire a single well-run B2B services business in the Greater Toronto Area — and step in full-time as CEO.</p>
     <div class="hero-actions">
       <a href="#contact" class="btn btn-primary">Book a conversation</a>
       <a href="#criteria" class="btn btn-ghost">View acquisition criteria</a>
@@ -195,17 +200,26 @@
     <div>
       <div class="kicker">The Search</div>
       <h2>An operator, not a financial buyer</h2>
-      <p>I'm acquiring a profitable, owner-operated business in the GTA to run personally — not to flip, strip, or roll into a portfolio and forget. I've spent my career on the buy side of M&A, in COO seats, and building companies from zero, and this search is backed by institutional equity, currently in negotiation.</p>
+      <p>I'm acquiring a profitable, owner-operated business in the GTA to run personally — not to flip, strip, or roll into a portfolio and forget. I've spent my career on the buy side of M&A, in COO seats, and building companies from zero.</p>
       <p>For owners, that means a transition partner who has done this before, is well-capitalized, and can move quickly and discreetly once the fit is right.</p>
     </div>
-    <div class="credentials">
-      <div class="cred-item"><div class="label">Venture Capital</div><div class="val">TELUS Global Ventures and Redesign Health</div></div>
-      <div class="cred-item"><div class="label">Buy-Side M&amp;A</div><div class="val">RBC Ventures</div></div>
-      <div class="cred-item"><div class="label">Operating Experience</div><div class="val">COO, $30M Manufacturing Operation</div></div>
-      <div class="cred-item"><div class="label">Operations Consulting Experience</div><div class="val">Carpedia International &amp; Business Development Bank of Canada</div></div>
-      <div class="cred-item"><div class="label">Capital Markets</div><div class="val">Red Cloud Securities · League Assets</div></div>
-      <div class="cred-item"><div class="label">Founder Experience</div><div class="val">Gryphon Sports Management · ISBY (exited)</div></div>
-      <div class="cred-item"><div class="label">Equity Partner</div><div class="val">Currently in negotiation</div></div>
+    <div>
+      <div class="credentials">
+        <div class="cred-item"><div class="val">Venture Capital</div></div>
+        <div class="cred-item"><div class="val">Buy-Side M&amp;A</div></div>
+        <div class="cred-item"><div class="val">Manufacturing/Operations Experience</div></div>
+        <div class="cred-item"><div class="val">Operations Consulting</div></div>
+        <div class="cred-item"><div class="val">Capital Markets</div></div>
+        <div class="cred-item"><div class="val">Founder Experience</div></div>
+      </div>
+      <div class="logo-strip">
+        <div class="logo-strip-label">Background includes</div>
+        <div class="logo-strip-row">
+          <span class="logo-mark">RBCx</span>
+          <span class="logo-mark">TELUS Global Ventures</span>
+          <span class="logo-mark">BDC</span>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -254,7 +268,7 @@
 <section class="section valuation-section" id="valuation">
   <div class="wrap">
     <div class="section-head">
-      <div class="kicker">Free Tool</div>
+      <div class="kicker">Valuation Tool</div>
       <h2>What's your business worth?</h2>
       <p>For owners exploring a sale: a quick, no-obligation estimate — built from how acquirers actually think about value in a business like yours. Nothing here is saved or shared.</p>
     </div>
@@ -278,8 +292,8 @@
           </div>
 
           <div class="field-row">
-            <div class="field"><label>Annual Revenue</label><div class="suffix"><input id="revenue" type="number" value="4000000"><span>CAD</span></div></div>
-            <div class="field"><label>Annual EBITDA</label><div class="suffix"><input id="ebitda" type="number" value="800000"><span>CAD</span></div></div>
+            <div class="field"><label>Annual Revenue</label><div class="suffix"><input id="revenue" type="number" placeholder="e.g. 4,000,000"><span>CAD</span></div></div>
+            <div class="field"><label>Annual EBITDA</label><div class="suffix"><input id="ebitda" type="number" placeholder="e.g. 800,000"><span>CAD</span></div></div>
           </div>
           <div class="helptext" style="margin-top:-8px;margin-bottom:14px;">EBITDA = profit before interest, tax, depreciation, and amortization — roughly your true cash earnings before an owner's personal add-backs.</div>
 
@@ -339,7 +353,7 @@
             </select>
           </div>
           <div id="reFields" style="display:none;">
-            <div class="field"><label>Estimated market value of the real estate</label><div class="suffix"><input id="revalue" type="number" value="1200000"><span>CAD</span></div></div>
+            <div class="field"><label>Estimated market value of the real estate</label><div class="suffix"><input id="revalue" type="number" placeholder="e.g. 1,200,000"><span>CAD</span></div></div>
             <div class="field">
               <label>How would you prefer to handle it?</label>
               <select id="restructure">
@@ -419,7 +433,7 @@
       <div class="step"><div class="num"></div><div><h3>Introductory conversation</h3><p>A no-obligation call to understand your business, your timeline, and what matters most to you in a transition — whether you're actively exploring a sale or simply curious.</p></div></div>
       <div class="step"><div class="num"></div><div><h3>Mutual NDA &amp; information exchange</h3><p>High-level financials and operating details shared under a signed NDA to assess fit against acquisition criteria.</p></div></div>
       <div class="step"><div class="num"></div><div><h3>Indication of interest</h3><p>A non-binding, preliminary view on valuation and structure if there's a fit — fast, and without dragging you through a lengthy process on a deal that isn't real.</p></div></div>
-      <div class="step"><div class="num"></div><div><h3>Letter of intent</h3><p>Agreed terms, exclusivity, and a defined diligence timeline — with institutional equity backing in place, so financing isn't a question mark late in the process.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>Letter of intent</h3><p>Agreed terms, exclusivity, and a defined diligence timeline — with financing structured well ahead of time, so it isn't a question mark late in the process.</p></div></div>
       <div class="step"><div class="num"></div><div><h3>Diligence &amp; close</h3><p>Focused, respectful diligence built around your team's bandwidth, followed by a transition plan you help shape.</p></div></div>
     </div>
   </div>
@@ -433,7 +447,7 @@
       <p>Whether you're an owner considering a sale, or a banker, lawyer, or advisor with a client who might be a fit — I'd like to hear from you.</p>
     </div>
     <div class="contact-grid">
-      <form class="contact-form" action="mailto:shaf@fortunaventures.example" method="post" enctype="text/plain">
+      <form class="contact-form" action="mailto:shafiq.vallani@gmail.com" method="post" enctype="text/plain">
         <label for="name">Name</label>
         <input id="name" name="name" type="text" placeholder="Your name" required>
         <label for="role">I'm reaching out as a</label>
@@ -454,9 +468,8 @@
       <div class="booking-card">
         <h3>Prefer to just grab time?</h3>
         <p>Book a 30-minute introductory call directly — no back-and-forth needed.</p>
-        <div class="calendly-embed" id="calendly-placeholder">
-          Calendly widget goes here.<br>Replace this block with your embed code once your scheduling link is confirmed.
-        </div>
+        <div class="calendly-inline-widget" data-url="https://calendly.com/shafiqvallani" style="min-width:280px;height:640px;"></div>
+        <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
       </div>
     </div>
   </div>
@@ -487,6 +500,18 @@ function calcValuation(){
   const industry = industryEl.value;
   const revenue = parseFloat(document.getElementById('revenue').value)||0;
   const ebitda = parseFloat(document.getElementById('ebitda').value)||0;
+
+  if(!revenue || !ebitda){
+    document.getElementById('valRange').textContent = '–';
+    document.getElementById('valMid').textContent = 'Enter your revenue and EBITDA to see an estimate';
+    document.getElementById('factorsList').innerHTML = '';
+    document.getElementById('outCash').textContent = '–';
+    document.getElementById('outNote').textContent = '–';
+    document.getElementById('outEarnout').textContent = '–';
+    document.getElementById('reCard').style.display = 'none';
+    return;
+  }
+
   const recurring = document.getElementById('recurring').value;
   const concentration = document.getElementById('concentration').value;
   const ownerdep = document.getElementById('ownerdep').value;
