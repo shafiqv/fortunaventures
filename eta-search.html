@@ -53,7 +53,9 @@
   .wrap{max-width:1040px;margin:0 auto;padding:0 32px;}
 
   /* NAV */
-  nav{display:flex;justify-content:space-between;align-items:center;padding:26px 32px;max-width:1040px;margin:0 auto;}
+  nav{display:flex;justify-content:space-between;align-items:center;padding:26px 32px;max-width:1040px;margin:0 auto;position:relative;}
+  .nav-toggle{display:none;background:none;border:none;padding:6px;margin:-6px;cursor:pointer;color:var(--ink);}
+  .nav-toggle svg{width:24px;height:24px;display:block;}
   .brand{font-family:var(--serif);font-size:20px;letter-spacing:0.02em;font-weight:600;}
   .brand span{color:var(--brass);}
   nav .links{display:flex;align-items:center;flex-wrap:nowrap;}
@@ -62,6 +64,27 @@
   nav .links a.home-icon{margin-left:28px;padding-bottom:0;border-bottom:none;display:flex;align-items:center;color:var(--slate);}
   nav .links a.home-icon svg{width:18px;height:18px;}
   nav .links a.home-icon:hover{color:var(--brass);}
+
+  @media(max-width:760px){
+    .nav-toggle{display:block;}
+    nav .links{
+      display:none;
+      position:absolute;
+      top:100%;
+      left:0;
+      right:0;
+      background:var(--paper);
+      flex-direction:column;
+      align-items:stretch;
+      padding:4px 32px 20px;
+      border-bottom:1px solid var(--hairline);
+      box-shadow:0 12px 20px rgba(18,33,59,0.1);
+      z-index:50;
+    }
+    nav .links.open{display:flex;}
+    nav .links a{margin-left:0;padding:14px 0;border-bottom:1px solid var(--hairline);}
+    nav .links a.home-icon{padding:14px 0;border-bottom:1px solid var(--hairline);}
+  }
 
   /* HERO */
   header.hero{background:var(--ink);color:var(--ivory);padding:88px 0 96px;position:relative;overflow:hidden;}
@@ -87,6 +110,7 @@
 
   /* ABOUT */
   .about-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:56px;align-items:start;}
+  .criteria-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:40px;align-items:start;}
   .about-grid p{color:var(--ink-2);font-size:15.5px;margin-bottom:16px;}
   .credentials{border-left:2px solid var(--brass);padding-left:20px;}
   .credentials .cred-item{margin-bottom:16px;}
@@ -191,15 +215,20 @@
   .booking-card{background:rgba(247,245,240,0.05);border:1px solid rgba(247,245,240,0.15);border-radius:4px;padding:28px;}
   .booking-card h3{font-family:var(--serif);font-size:18px;margin:0 0 10px;}
   .booking-card p{color:#B9BFCC;font-size:14px;margin-bottom:18px;}
-  .calendly-inline-widget{border-radius:3px;overflow:hidden;}
+  .calendly-inline-widget{width:100%;min-width:0;border-radius:3px;overflow:hidden;}
 
   footer{padding:36px 32px;text-align:center;font-size:12.5px;color:var(--slate);}
 
   @media(max-width:760px){
-    .about-grid,.contact-grid{grid-template-columns:1fr;}
+    .about-grid,.contact-grid,.criteria-grid{grid-template-columns:1fr;}
+    .criteria-grid{gap:32px;}
     .who-header{flex-direction:column;align-items:flex-start;}
     h1{font-size:32px;}
     .step{grid-template-columns:44px 1fr;}
+    .valuation-section .field-row{grid-template-columns:1fr;}
+    .ts-row{flex-direction:column;align-items:flex-start;gap:4px;padding:14px 20px;}
+    .ts-row .v{text-align:left;max-width:100%;}
+    .termsheet-head{padding:16px 20px;}
   }
 </style>
 </head>
@@ -207,7 +236,10 @@
 
 <nav>
   <a href="index.html" style="text-decoration:none;color:inherit;"><div class="brand">Fortuna <span>Ventures</span></div></a>
-  <div class="links">
+  <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="links" id="navLinks">
     <a href="#criteria">Criteria</a>
     <a href="#who">Who Am I</a>
     <a href="#valuation">Estimate Your Value</a>
@@ -218,6 +250,19 @@
     </a>
   </div>
 </nav>
+<script>
+  document.getElementById('navToggle').addEventListener('click', function(){
+    const links = document.getElementById('navLinks');
+    const open = links.classList.toggle('open');
+    this.setAttribute('aria-expanded', open);
+  });
+  document.getElementById('navLinks').addEventListener('click', function(e){
+    if(e.target.tagName === 'A'){
+      this.classList.remove('open');
+      document.getElementById('navToggle').setAttribute('aria-expanded', false);
+    }
+  });
+</script>
 
 <header class="hero">
   <div class="hero-inner">
@@ -267,7 +312,7 @@
       <h2>What I'm looking for</h2>
       <p>A working term sheet — not a rigid formula, but the non-negotiables that guide every conversation.</p>
     </div>
-    <div style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:40px;align-items:start;">
+    <div class="criteria-grid">
       <div class="termsheet">
         <div class="termsheet-head"><div class="t">Target Profile</div><div class="s">Indicative</div></div>
         <div class="ts-row"><div class="k">Geography</div><div class="v">GTA</div></div>
@@ -525,7 +570,7 @@
       <div class="booking-card">
         <h3>Prefer to just grab time?</h3>
         <p>Book a 30-minute introductory call directly — no back-and-forth needed.</p>
-        <div class="calendly-inline-widget" data-url="https://calendly.com/shafiqvallani" style="min-width:280px;height:640px;"></div>
+        <div class="calendly-inline-widget" data-url="https://calendly.com/shafiqvallani" style="height:640px;"></div>
         <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
       </div>
     </div>
