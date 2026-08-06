@@ -329,10 +329,13 @@
       <div>
         <div class="kicker" style="margin-bottom:14px;">Industries of interest</div>
         <div class="chip-row">
-          <div class="chip">Managed IT (MSP, niche vertical)</div>
-          <div class="chip">Accounting &amp; compliance services</div>
           <div class="chip">Building &amp; facilities services</div>
-          <div class="chip">Staffing (permanent placement)</div>
+          <div class="chip">Commercial landscaping &amp; grounds maintenance</div>
+          <div class="chip">Managed IT (MSP, niche vertical)</div>
+        </div>
+        <div class="kicker" style="margin:22px 0 14px;">Considered opportunistically</div>
+        <div class="chip-row">
+          <div class="chip">Fire &amp; life safety inspection &amp; testing</div>
           <div class="chip">Training, certification &amp; inspection</div>
         </div>
         <div class="kicker" style="margin:22px 0 14px;">Not a fit right now</div>
@@ -341,6 +344,8 @@
           <div class="chip avoid">Construction &amp; capital-intensive manufacturing</div>
           <div class="chip avoid">Marketing / creative agencies</div>
           <div class="chip avoid">Consumer e-commerce</div>
+          <div class="chip avoid">Accounting &amp; compliance services</div>
+          <div class="chip avoid">Staffing (all forms)</div>
         </div>
       </div>
     </div>
@@ -386,11 +391,12 @@
           <div class="field">
             <label>Industry</label>
             <select id="industry">
-              <option value="proserv">B2B Professional Services</option>
+              <option value="facilities">Building &amp; Facilities Services</option>
+              <option value="landscaping">Commercial Landscaping &amp; Grounds Maintenance</option>
               <option value="it">Managed IT / Niche Tech Services</option>
+              <option value="firelifesafety">Fire &amp; Life Safety Inspection &amp; Testing</option>
               <option value="training">Training &amp; Certification</option>
               <option value="inspection">Commercial Inspection &amp; Testing</option>
-              <option value="saas">SaaS-Adjacent Services</option>
               <option value="other">Other B2B Services</option>
             </select>
           </div>
@@ -601,11 +607,12 @@
 
 <script>
 const BASE_MULTIPLES = {
-  proserv:   {low:3.5, high:5.5},
+  facilities:{low:3.0, high:5.0},
+  landscaping:{low:4.0, high:5.5},
   it:        {low:4.0, high:6.0},
+  firelifesafety:{low:3.5, high:5.0},
   training:  {low:3.0, high:5.0},
   inspection:{low:3.5, high:5.5},
-  saas:      {low:4.5, high:7.0},
   other:     {low:3.0, high:5.0}
 };
 
