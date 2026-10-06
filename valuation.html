@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valuation Tool | Fortuna Ventures</title>
+<meta name="description" content="A quick, no-obligation estimate of what your business might be worth, built from how acquirers think about value. Nothing is saved or shared.">
+<link rel="canonical" href="https://fortunaventures.ca/valuation.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Fortuna Ventures">
+<meta property="og:title" content="Valuation Tool | Fortuna Ventures">
+<meta property="og:description" content="Curious what your business might be worth? A quick, no-obligation estimate. Nothing is saved or shared.">
+<meta property="og:url" content="https://fortunaventures.ca/valuation.html">
+<meta property="og:image" content="https://fortunaventures.ca/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Valuation Tool | Fortuna Ventures">
+<meta name="twitter:description" content="Curious what your business might be worth? A quick, no-obligation estimate. Nothing is saved or shared.">
+<meta name="twitter:image" content="https://fortunaventures.ca/og-image.jpg">
+<style>
+  :root{
+    --ink:#12213B;
+    --ink-2:#1B2D4D;
+    --ivory:#F7F5F0;
+    --paper:#FFFFFF;
+    --brass:#A8823C;
+    --brass-light:#C9A868;
+    --slate:#5B6472;
+    --hairline:#D8D2C4;
+    --good:#3F7A54;
+    --good-bg:#EEF5EF;
+    --bad:#9A3B2F;
+    --bad-bg:#FBF0EE;
+    --serif: "Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,serif;
+    --sans: -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--ivory);color:var(--ink);font-family:var(--sans);line-height:1.55;}
+  a{color:inherit;}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 32px;}
+
+  /* NAV */
+  nav{display:flex;justify-content:space-between;align-items:center;padding:26px 32px;max-width:1040px;margin:0 auto;position:relative;}
+  .nav-toggle{display:none;background:none;border:none;padding:6px;margin:-6px;cursor:pointer;color:var(--ink);}
+  .nav-toggle svg{width:24px;height:24px;display:block;}
+  .brand{font-family:var(--serif);font-size:20px;letter-spacing:0.02em;font-weight:600;}
+  .brand span{color:var(--brass);}
+  nav .links{display:flex;align-items:center;flex-wrap:nowrap;}
+  nav .links a{margin-left:28px;font-size:14px;text-decoration:none;color:var(--ink);border-bottom:1px solid transparent;padding-bottom:2px;white-space:nowrap;}
+  nav .links a:hover{border-color:var(--brass);}
+  nav .links a.home-icon{margin-left:28px;padding-bottom:0;border-bottom:none;display:flex;align-items:center;color:var(--slate);}
+  nav .links a.home-icon svg{width:18px;height:18px;}
+  nav .links a.home-icon:hover{color:var(--brass);}
+
+  @media(max-width:760px){
+    .nav-toggle{display:block;}
+    nav .links{
+      display:none;
+      position:absolute;
+      top:100%;
+      left:0;
+      right:0;
+      background:var(--paper);
+      flex-direction:column;
+      align-items:stretch;
+      padding:4px 32px 20px;
+      border-bottom:1px solid var(--hairline);
+      box-shadow:0 12px 20px rgba(18,33,59,0.1);
+      z-index:50;
+    }
+    nav .links.open{display:flex;}
+    nav .links a{margin-left:0;padding:14px 0;border-bottom:1px solid var(--hairline);}
+    nav .links a.home-icon{padding:14px 0;border-bottom:1px solid var(--hairline);}
+  }
+
+  /* SECTION HEADERS */
+  .section{padding:76px 32px;}
+  .section-head{max-width:640px;margin-bottom:44px;}
+  .kicker{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--brass);font-weight:700;margin-bottom:10px;}
+  h2{font-family:var(--serif);font-weight:500;font-size:30px;margin:0 0 12px;}
+  .section-head p{color:var(--slate);font-size:15.5px;max-width:560px;}
+
+  /* VALUATION TOOL (seller-facing estimator) */
+  .valuation-section .vt-grid{display:grid;grid-template-columns:0.95fr 1.05fr;gap:24px;align-items:start;}
+  .valuation-section .card{background:var(--paper);border:1px solid var(--hairline);border-radius:5px;padding:30px 28px;margin-bottom:24px;}
+  .valuation-section .card h3{font-family:var(--serif);font-size:16px;font-weight:600;margin:0 0 4px;}
+  .valuation-section .h-sub{font-size:12.5px;color:var(--slate);margin-bottom:16px;}
+  .valuation-section .field{margin-bottom:16px;}
+  .valuation-section label{display:block;font-size:12px;color:var(--ink-2);font-weight:600;margin-bottom:5px;}
+  .valuation-section .helptext{font-size:11.5px;color:var(--slate);margin-top:4px;}
+  .valuation-section input,.valuation-section select{width:100%;padding:10px 12px;border:1px solid var(--hairline);border-radius:3px;font-size:14px;background:#fff;color:var(--ink);}
+  .valuation-section input:focus,.valuation-section select:focus{outline:none;border-color:var(--brass);}
+  .valuation-section .suffix{position:relative;}
+  .valuation-section .suffix span{position:absolute;right:11px;top:10px;font-size:12px;color:var(--slate);}
+  .valuation-section .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+  .valuation-section .result-hero{background:var(--ink);color:var(--ivory);border-radius:6px;padding:44px 28px;margin-bottom:24px;text-align:center;min-height:96px;}
+  .valuation-section .result-hero .rk{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--brass-light);margin-bottom:10px;}
+  .valuation-section .result-hero .range{font-family:var(--serif);font-size:34px;font-weight:500;margin-bottom:6px;}
+  .valuation-section .result-hero .mid{font-size:13px;color:#C9CDD8;}
+
+  .valuation-section .factor{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--hairline);font-size:13.5px;}
+  .valuation-section #factorsList{min-height:210px;}
+  .valuation-section .factors-placeholder{color:var(--slate);font-size:13px;padding:8px 0 0;line-height:1.6;}
+  .valuation-section .factor:last-child{border-bottom:none;}
+  .valuation-section .factor .flabel{color:var(--ink-2);}
+  .valuation-section .impact{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .valuation-section .impact.pos{color:var(--good,#3F7A54);background:var(--good-bg,#EEF5EF);}
+  .valuation-section .impact.neu{color:var(--slate);background:#F0EEE8;}
+  .valuation-section .impact.neg{color:var(--bad,#9A3B2F);background:var(--bad-bg,#FBF0EE);}
+
+  .valuation-section .structure-row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .valuation-section .structure-bar{flex:1;height:10px;border-radius:6px;background:#EFEAE0;overflow:hidden;display:flex;}
+  .valuation-section .seg{height:100%;}
+  .valuation-section .seg.cash{background:var(--brass);}
+  .valuation-section .seg.note{background:var(--brass-light);}
+  .valuation-section .seg.earnout{background:#D8C9A3;}
+  .valuation-section .structure-legend{display:flex;gap:18px;font-size:12px;color:var(--slate);margin-top:6px;flex-wrap:wrap;}
+  .valuation-section .legend-item{display:flex;align-items:center;gap:6px;}
+  .valuation-section .dot{width:9px;height:9px;border-radius:50%;}
+  .valuation-section .dot.cash{background:var(--brass);}
+  .valuation-section .dot.note{background:var(--brass-light);}
+  .valuation-section .dot.earnout{background:#D8C9A3;}
+  .valuation-section .struct-out{display:flex;justify-content:space-between;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--hairline);}
+  .valuation-section .struct-out:last-child{border-bottom:none;}
+  .valuation-section .struct-out .v{font-weight:700;}
+
+  .valuation-section .vt-note{font-size:12px;color:var(--slate);margin-top:14px;line-height:1.55;}
+
+  @media(max-width:880px){.valuation-section .vt-grid{grid-template-columns:1fr;}}
+
+  footer{padding:36px 32px;text-align:center;font-size:12.5px;color:var(--slate);}
+
+  nav .links a[aria-current="page"]{border-color:var(--brass);}
+
+  @media(max-width:760px){
+    .valuation-section .field-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" style="text-decoration:none;color:inherit;"><div class="brand">Fortuna <span>Ventures</span></div></a>
+  <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="links" id="navLinks">
+    <a href="eta-search.html#criteria">Criteria</a>
+    <a href="eta-search.html#who">Who Am I</a>
+    <a href="eta-search.html#process">Process</a>
+    <a href="eta-search.html#contact">Contact</a>
+    <a href="valuation.html" aria-current="page">Valuation Tool</a>
+    <a href="index.html" class="home-icon" title="Back to Fortuna Ventures" aria-label="Back to Fortuna Ventures">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
+    </a>
+  </div>
+</nav>
+<script>
+  document.getElementById('navToggle').addEventListener('click', function(){
+    const links = document.getElementById('navLinks');
+    const open = links.classList.toggle('open');
+    this.setAttribute('aria-expanded', open);
+  });
+  document.getElementById('navLinks').addEventListener('click', function(e){
+    if(e.target.tagName === 'A'){
+      this.classList.remove('open');
+      document.getElementById('navToggle').setAttribute('aria-expanded', false);
+    }
+  });
+</script>
+
+<section class="section valuation-section" id="valuation">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Valuation Tool</div>
+      <h2>Curious what your business might be worth?</h2>
+      <p>A quick, no-obligation estimate - takes about a minute. Built from how acquirers actually think about value in a business like yours. Nothing here is saved or shared.</p>
+    </div>
+    <div class="vt-grid">
+      <!-- INPUTS -->
+      <div>
+        <div class="card">
+          <h3>Tell us about your business</h3>
+          <div class="h-sub">Takes about a minute.</div>
+
+          <div class="field">
+            <label>Industry</label>
+            <select id="industry">
+              <option value="facilities">Building &amp; Facilities Services</option>
+              <option value="landscaping">Commercial Landscaping &amp; Grounds Maintenance</option>
+              <option value="it">Managed IT / Niche Tech Services</option>
+              <option value="firelifesafety">Fire &amp; Life Safety Inspection &amp; Testing</option>
+              <option value="training">Training &amp; Certification</option>
+              <option value="inspection">Commercial Inspection &amp; Testing</option>
+              <option value="other">Other B2B Services</option>
+            </select>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label>Annual Revenue</label>
+              <select id="revenue">
+                <option value="">Select a range</option>
+                <option value="0-1000000">Under $1M</option>
+                <option value="1000000-2000000">$1M – $2M</option>
+                <option value="2000000-4000000">$2M – $4M</option>
+                <option value="4000000-6000000">$4M – $6M</option>
+                <option value="6000000-10000000">$6M – $10M</option>
+                <option value="10000000-20000000">$10M – $20M</option>
+                <option value="20000000-30000000">$20M+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Annual EBITDA</label>
+              <select id="ebitda">
+                <option value="">Select a range</option>
+                <option value="0-250000">Under $250K</option>
+                <option value="250000-500000">$250K – $500K</option>
+                <option value="500000-750000">$500K – $750K</option>
+                <option value="750000-1000000">$750K – $1M</option>
+                <option value="1000000-1500000">$1M – $1.5M</option>
+                <option value="1500000-2500000">$1.5M – $2.5M</option>
+                <option value="2500000-4000000">$2.5M+</option>
+              </select>
+            </div>
+          </div>
+          <div class="helptext" style="margin-top:-8px;margin-bottom:14px;">Just pick the closest range - exact figures aren't needed. EBITDA = profit before interest, tax, depreciation, and amortization, roughly your true cash earnings before an owner's personal add-backs.</div>
+
+          <div class="field">
+            <label>How much of your revenue is recurring or contracted?</label>
+            <select id="recurring">
+              <option value="high">More than half - retainers, contracts, or subscriptions</option>
+              <option value="mid">A meaningful share - some contracts, some project work</option>
+              <option value="low">Mostly one-off or project-based</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Does any single customer make up a large share of revenue?</label>
+            <select id="concentration">
+              <option value="low">No - revenue is well spread out</option>
+              <option value="mid">One or two clients matter, but it's manageable</option>
+              <option value="high">Yes - one client is a large share of the business</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>How dependent is the business on you personally?</label>
+            <select id="ownerdep">
+              <option value="low">It runs well day-to-day without me</option>
+              <option value="mid">I'm still involved in key relationships and decisions</option>
+              <option value="high">Clients and operations rely heavily on me directly</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Do you have a management team beyond yourself?</label>
+            <select id="mgmt">
+              <option value="yes">Yes - a second layer of leadership would stay on</option>
+              <option value="no">Not really - it's mostly me running things</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>How has revenue trended over the last 2–3 years?</label>
+            <select id="growth">
+              <option value="fast">Growing steadily, year over year</option>
+              <option value="flat">Roughly flat</option>
+              <option value="declining">Declining</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Real Estate</h3>
+          <div class="h-sub">If you own the property the business operates from, it can be part of the conversation - valued separately from the business itself.</div>
+          <div class="field">
+            <label>Do you own the real estate the business operates from?</label>
+            <select id="hasre">
+              <option value="no">No - we lease our space</option>
+              <option value="yes">Yes - the business (or I personally) own the property</option>
+            </select>
+          </div>
+          <div id="reFields" style="display:none;">
+            <div class="field"><label>Estimated market value of the real estate</label><div class="suffix"><input id="revalue" type="number" placeholder="e.g. 1,200,000"><span>CAD</span></div></div>
+            <div class="field">
+              <label>How would you prefer to handle it?</label>
+              <select id="restructure">
+                <option value="include">Include it in the sale - one transaction</option>
+                <option value="leaseback">Keep the property - lease it back to the buyer</option>
+                <option value="undecided">Not sure yet - open to discussing options</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OUTPUTS -->
+      <div>
+        <div class="result-hero">
+          <div class="rk">Estimated Valuation Range</div>
+          <div class="range" id="valRange">–</div>
+          <div class="mid" id="valMid">Based on the details entered</div>
+        </div>
+
+        <div class="card">
+          <h3>What's shaping this number</h3>
+          <div class="h-sub">These are the factors that move a valuation up or down in a deal like yours.</div>
+          <div id="factorsList"></div>
+        </div>
+
+        <div class="card">
+          <h3>What a typical deal might look like</h3>
+          <div class="h-sub">Illustrative only - actual structure depends on financing, diligence, and negotiation.</div>
+          <div class="structure-row">
+            <div class="structure-bar">
+              <div class="seg cash" id="segCash" style="width:75%"></div>
+              <div class="seg note" id="segNote" style="width:15%"></div>
+              <div class="seg earnout" id="segEarnout" style="width:10%"></div>
+            </div>
+          </div>
+          <div class="structure-legend">
+            <div class="legend-item"><div class="dot cash"></div>Cash at close</div>
+            <div class="legend-item"><div class="dot note"></div>Seller note (paid over time)</div>
+            <div class="legend-item"><div class="dot earnout"></div>Earnout (performance-based)</div>
+          </div>
+          <div style="margin-top:16px;">
+            <div class="struct-out"><div class="k">Cash at close (~75%)</div><div class="v" id="outCash">–</div></div>
+            <div class="struct-out"><div class="k">Seller note (~15%)</div><div class="v" id="outNote">–</div></div>
+            <div class="struct-out"><div class="k">Earnout, if targets are met (~10%)</div><div class="v" id="outEarnout">–</div></div>
+          </div>
+          <div class="vt-note">Most owner-operated business sales aren't 100% cash at close. A seller note and modest earnout are common and can help bridge a valuation gap - while cash at close is still the majority of proceeds in a well-structured deal.</div>
+        </div>
+
+        <div class="card" id="reCard" style="display:none;">
+          <h3>Real Estate - Separate from the Business Valuation</h3>
+          <div class="h-sub">Real estate is valued on its own terms, not folded into the EBITDA multiple above.</div>
+          <div class="struct-out"><div class="k">Business valuation (from above)</div><div class="v" id="reBizVal">–</div></div>
+          <div class="struct-out"><div class="k">Estimated real estate value</div><div class="v" id="reValOut">–</div></div>
+          <div class="struct-out"><div class="k">Combined transaction value, if included</div><div class="v" id="reTotalVal">–</div></div>
+          <div class="vt-note" id="reNote"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Fortuna Ventures - Acquisition Search · Toronto, ON · Confidential inquiries welcome
+</footer>
+
+<script>
+const BASE_MULTIPLES = {
+  facilities:{low:3.0, high:5.0},
+  landscaping:{low:4.0, high:5.5},
+  it:        {low:4.0, high:6.0},
+  firelifesafety:{low:3.5, high:5.0},
+  training:  {low:3.0, high:5.0},
+  inspection:{low:3.5, high:5.5},
+  other:     {low:3.0, high:5.0}
+};
+
+function fmtCurrency(n){
+  if(!isFinite(n)) return '–';
+  return n.toLocaleString('en-CA',{style:'currency',currency:'CAD',maximumFractionDigits:0});
+}
+
+function calcValuation(){
+  const industryEl = document.getElementById('industry');
+  if(!industryEl) return; // valuation tool not present
+  const industry = industryEl.value;
+
+  // Revenue/EBITDA are picked as bucketed ranges (e.g. "1000000-2000000"); use the midpoint of the selected bucket.
+  function midOfBucket(value){
+    if(!value) return 0;
+    const parts = value.split('-').map(Number);
+    return (parts[0]+parts[1])/2;
+  }
+  const revenue = midOfBucket(document.getElementById('revenue').value);
+  const ebitda = midOfBucket(document.getElementById('ebitda').value);
+
+  if(!revenue || !ebitda){
+    document.getElementById('valRange').textContent = '–';
+    document.getElementById('valMid').textContent = 'Enter your revenue and EBITDA to see an estimate';
+    document.getElementById('factorsList').innerHTML = '<div class="factors-placeholder">Once you\'ve filled in the details on the left - recurring revenue, customer concentration, management depth, and growth trend - the factors moving your valuation up or down will show up here.</div>';
+    document.getElementById('outCash').textContent = '–';
+    document.getElementById('outNote').textContent = '–';
+    document.getElementById('outEarnout').textContent = '–';
+    document.getElementById('reCard').style.display = 'none';
+    return;
+  }
+
+  const recurring = document.getElementById('recurring').value;
+  const concentration = document.getElementById('concentration').value;
+  const ownerdep = document.getElementById('ownerdep').value;
+  const mgmt = document.getElementById('mgmt').value;
+  const growth = document.getElementById('growth').value;
+
+  const base = BASE_MULTIPLES[industry];
+  const factors = [];
+  let adj = 0;
+
+  if(recurring==='high'){ adj+=0.5; factors.push({label:'Strong recurring / contracted revenue', impact:'pos'}); }
+  else if(recurring==='mid'){ adj+=0.15; factors.push({label:'Some recurring revenue', impact:'neu'}); }
+  else { adj-=0.3; factors.push({label:'Mostly project-based revenue', impact:'neg'}); }
+
+  if(concentration==='low'){ adj+=0.3; factors.push({label:'Revenue well diversified across customers', impact:'pos'}); }
+  else if(concentration==='mid'){ adj+=0; factors.push({label:'Moderate customer concentration', impact:'neu'}); }
+  else { adj-=0.5; factors.push({label:'High concentration in one customer', impact:'neg'}); }
+
+  if(ownerdep==='low'){ adj+=0.4; factors.push({label:'Business runs independent of the owner', impact:'pos'}); }
+  else if(ownerdep==='mid'){ adj-=0.1; factors.push({label:'Owner still involved in key relationships', impact:'neu'}); }
+  else { adj-=0.6; factors.push({label:'Business highly dependent on the owner', impact:'neg'}); }
+
+  if(mgmt==='yes'){ adj+=0.3; factors.push({label:'Second-tier management in place', impact:'pos'}); }
+  else { adj-=0.3; factors.push({label:'No management layer beyond owner', impact:'neg'}); }
+
+  if(growth==='fast'){ adj+=0.4; factors.push({label:'Consistent year-over-year growth', impact:'pos'}); }
+  else if(growth==='flat'){ adj+=0; factors.push({label:'Flat revenue trend', impact:'neu'}); }
+  else { adj-=0.5; factors.push({label:'Declining revenue trend', impact:'neg'}); }
+
+  let lowMult = Math.max(1.5, base.low + adj*0.6);
+  let highMult = Math.max(lowMult+0.3, base.high + adj*0.6);
+
+  const lowVal = ebitda*lowMult;
+  const highVal = ebitda*highMult;
+  const midVal = (lowVal+highVal)/2;
+
+  document.getElementById('valRange').textContent = fmtCurrency(lowVal)+' – '+fmtCurrency(highVal);
+  document.getElementById('valMid').textContent = 'Roughly '+lowMult.toFixed(1)+'x – '+highMult.toFixed(1)+'x EBITDA · midpoint '+fmtCurrency(midVal);
+
+  const list = document.getElementById('factorsList');
+  list.innerHTML='';
+  factors.forEach(f=>{
+    const row = document.createElement('div');
+    row.className='factor';
+    const iconMap = {pos:'↑ Helps value', neu:'– Neutral', neg:'↓ Hurts value'};
+    row.innerHTML = '<div class="flabel">'+f.label+'</div><div class="impact '+f.impact+'">'+iconMap[f.impact]+'</div>';
+    list.appendChild(row);
+  });
+
+  document.getElementById('outCash').textContent = fmtCurrency(midVal*0.75);
+  document.getElementById('outNote').textContent = fmtCurrency(midVal*0.15);
+  document.getElementById('outEarnout').textContent = fmtCurrency(midVal*0.10);
+
+  // Real estate
+  const hasre = document.getElementById('hasre').value;
+  const reFields = document.getElementById('reFields');
+  const reCard = document.getElementById('reCard');
+  if(hasre==='yes'){
+    reFields.style.display='block';
+    reCard.style.display='block';
+    const revalue = parseFloat(document.getElementById('revalue').value)||0;
+    const restructure = document.getElementById('restructure').value;
+    document.getElementById('reBizVal').textContent = fmtCurrency(midVal);
+    document.getElementById('reValOut').textContent = fmtCurrency(revalue);
+    document.getElementById('reTotalVal').textContent = fmtCurrency(midVal+revalue);
+    const notes = {
+      include: 'Buying the real estate alongside the business is straightforward - it typically gets financed separately from the business acquisition, often on better terms than business acquisition debt, since it\'s backed by a hard asset.',
+      leaseback: 'Keeping the property and leasing it back is common. The business is acquired on its own; you continue to hold the real estate and collect rent - often at a lease rate set to market, confirmed as part of due diligence.',
+      undecided: 'No need to decide now. Both paths - selling the real estate as part of the deal, or keeping it and leasing it back - are workable, and it\'s a normal part of the conversation once we\'re further along.'
+    };
+    document.getElementById('reNote').textContent = notes[restructure];
+  } else {
+    reFields.style.display='none';
+    reCard.style.display='none';
+  }
+}
+
+const valuationInputs = document.querySelectorAll('.valuation-section input, .valuation-section select');
+valuationInputs.forEach(el=>el.addEventListener('input', calcValuation));
+calcValuation();
+</script>
+
+</body>
+</html>
