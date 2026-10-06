@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fortuna Ventures - GTA Business Acquisition Search</title>
-<meta name="description" content="Fortuna Ventures is a self-funded search to acquire a profitable B2B services business in the Greater Toronto Area, led by Shafiq Vallani stepping in full-time as CEO.">
+<title>Fortuna Ventures - Business Acquisition Search</title>
+<meta name="description" content="Shafiq Vallani is buying one profitable business to own and run as CEO. A seasoned operator investing his own capital. Owners and advisors welcome.">
 <link rel="canonical" href="https://fortunaventures.ca/eta-search.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Fortuna Ventures">
-<meta property="og:title" content="Fortuna Ventures - GTA Business Acquisition Search">
-<meta property="og:description" content="Acquiring one profitable GTA business. Operating it for the next decade. A self-funded search led by Shafiq Vallani.">
+<meta property="og:title" content="Fortuna Ventures - Business Acquisition Search">
+<meta property="og:description" content="Acquiring one profitable business. Operating it for the next decade. A seasoned operator investing his own capital.">
 <meta property="og:url" content="https://fortunaventures.ca/eta-search.html">
 <meta property="og:image" content="https://fortunaventures.ca/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Fortuna Ventures - GTA Business Acquisition Search">
-<meta name="twitter:description" content="Acquiring one profitable GTA business. Operating it for the next decade. A self-funded search led by Shafiq Vallani.">
+<meta name="twitter:title" content="Fortuna Ventures - Business Acquisition Search">
+<meta name="twitter:description" content="Acquiring one profitable business. Operating it for the next decade. A seasoned operator investing his own capital.">
 <meta name="twitter:image" content="https://fortunaventures.ca/og-image.jpg">
 <script type="application/ld+json">
 {
@@ -111,25 +111,15 @@
   /* ABOUT */
   .about-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:56px;align-items:start;}
   .criteria-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:40px;align-items:start;}
-  .about-grid p{color:var(--ink-2);font-size:15.5px;margin-bottom:16px;}
-  .credentials{border-left:2px solid var(--brass);padding-left:20px;}
-  .credentials .cred-item{margin-bottom:16px;}
-  .credentials .cred-item .label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--slate);margin-bottom:3px;}
-  .credentials .cred-item .val{font-family:var(--serif);font-size:16px;}
-  .logo-strip{margin-top:28px;padding-top:22px;border-top:1px solid var(--hairline);}
-  .logo-strip-label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--slate);margin-bottom:12px;}
-  .logo-strip-row{display:flex;flex-wrap:wrap;gap:20px 28px;align-items:center;}
-  .logo-mark{font-family:var(--serif);font-size:14px;color:var(--slate);letter-spacing:0.02em;opacity:0.75;}
-
-  /* TERM SHEET CARD */
-  .termsheet{background:var(--paper);border:1px solid var(--hairline);border-radius:4px;overflow:hidden;box-shadow:0 1px 3px rgba(18,33,59,0.06);}
-  .termsheet-head{background:var(--ink);color:var(--ivory);padding:20px 28px;display:flex;justify-content:space-between;align-items:baseline;}
-  .termsheet-head .t{font-family:var(--serif);font-size:16px;}
-  .termsheet-head .s{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--brass-light);}
-  .ts-row{display:flex;justify-content:space-between;padding:15px 28px;border-bottom:1px solid var(--hairline);font-size:14.5px;}
-  .ts-row:last-child{border-bottom:none;}
-  .ts-row .k{color:var(--slate);}
-  .ts-row .v{font-weight:600;text-align:right;max-width:56%;}
+  .keypoints{list-style:none;margin:8px 0 0;padding:0;}
+  .keypoints li{position:relative;font-family:var(--serif);font-size:23px;line-height:1.35;color:var(--ink);padding:18px 0 18px 30px;border-bottom:1px solid var(--hairline);}
+  .keypoints li:first-child{border-top:1px solid var(--hairline);}
+  .keypoints li::before{content:"";position:absolute;left:0;top:32px;width:14px;height:2px;background:var(--brass);}
+  .keypoints li strong{font-weight:600;}
+  .credentials{border-left:2px solid var(--brass);padding-left:22px;}
+  .credentials .cred-item{margin-bottom:22px;}
+  .credentials .cred-item:last-child{margin-bottom:0;}
+  .credentials .cred-item .val{font-family:var(--serif);font-size:21px;line-height:1.35;}
 
   /* PROCESS */
   .process-list{counter-reset:step;border-top:1px solid var(--hairline);}
@@ -149,7 +139,7 @@
 
   /* CRITERIA CHIPS */
   .chip-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;}
-  .chip{border:1px solid var(--hairline);background:var(--paper);padding:8px 14px;border-radius:20px;font-size:13px;color:var(--ink-2);}
+  .chip{border:1px solid var(--hairline);background:var(--paper);padding:10px 18px;border-radius:24px;font-size:15px;color:var(--ink-2);}
   .chip.avoid{border-color:#D9C7C0;color:#8A4A3C;background:#FBF3F1;}
 
   /* VALUATION TOOL (seller-facing estimator) */
@@ -225,9 +215,9 @@
     h1{font-size:32px;}
     .step{grid-template-columns:44px 1fr;}
     .valuation-section .field-row{grid-template-columns:1fr;}
-    .ts-row{flex-direction:column;align-items:flex-start;gap:4px;padding:14px 20px;}
-    .ts-row .v{text-align:left;max-width:100%;}
-    .termsheet-head{padding:16px 20px;}
+    .keypoints li{font-size:20px;padding:16px 0 16px 26px;}
+    .keypoints li::before{top:29px;width:12px;}
+    .credentials .cred-item .val{font-size:19px;}
   }
 </style>
 </head>
@@ -266,8 +256,8 @@
 <header class="hero">
   <div class="hero-inner">
     <div class="eyebrow">Entrepreneurship Through Acquisition</div>
-    <h1>Acquiring one profitable GTA business. Operating it for the next decade.</h1>
-    <p class="lead">Fortuna Ventures is a self-funded search to acquire a single well-run B2B services business in the Greater Toronto Area - and step in full-time as CEO.</p>
+    <h1>Acquiring one profitable business. Operating it for the next decade.</h1>
+    <p class="lead">I'm putting my own capital to work to buy one well-run business, and stepping in full-time as CEO to run it.</p>
     <div class="hero-actions">
       <a href="#contact" class="btn btn-primary">Book a conversation</a>
       <a href="#criteria" class="btn btn-ghost">View acquisition criteria</a>
@@ -280,25 +270,18 @@
     <div>
       <div class="kicker">The Search</div>
       <h2>An operator, not a financial buyer</h2>
-      <p>I'm acquiring a profitable, owner-operated business in the GTA to run personally - not to flip, strip, or roll into a portfolio and forget. I've spent my career on the buy side of M&A, in COO seats, and as founder-CEO of two companies I built and led to exit.</p>
-      <p>For owners, that means a transition partner who has already run a company as the final decision maker, is well-capitalized, and can move quickly and discreetly once the fit is right.</p>
+      <ul class="keypoints">
+        <li><strong>Seasoned professional</strong> buying a company</li>
+        <li><strong>My own capital</strong> - real skin in the game</li>
+        <li><strong>Rolling up my sleeves</strong> to run it full-time</li>
+      </ul>
     </div>
     <div>
+      <div class="kicker">Why me</div>
       <div class="credentials">
-        <div class="cred-item"><div class="val">Venture Capital</div></div>
-        <div class="cred-item"><div class="val">Buy-Side M&amp;A</div></div>
-        <div class="cred-item"><div class="val">Manufacturing/Operations Experience</div></div>
-        <div class="cred-item"><div class="val">Operations Consulting</div></div>
-        <div class="cred-item"><div class="val">Capital Markets</div></div>
-        <div class="cred-item"><div class="val">Founder Experience</div></div>
-      </div>
-      <div class="logo-strip">
-        <div class="logo-strip-label">Background includes</div>
-        <div class="logo-strip-row">
-          <span class="logo-mark">RBC Ventures</span>
-          <span class="logo-mark">TELUS Global Ventures</span>
-          <span class="logo-mark">BDC</span>
-        </div>
+        <div class="cred-item"><div class="val">Direct founder-CEO experience</div></div>
+        <div class="cred-item"><div class="val">Hands-on operating experience</div></div>
+        <div class="cred-item"><div class="val">Deal experience on the buy side of M&amp;A</div></div>
       </div>
     </div>
   </div>
@@ -309,43 +292,23 @@
     <div class="section-head">
       <div class="kicker">Acquisition Criteria</div>
       <h2>What I'm looking for</h2>
-      <p>A working term sheet - not a rigid formula, but the non-negotiables that guide every conversation.</p>
+      <p>Show me everything. I'm sector-agnostic and would rather see a deal and decide than rule one out in advance.</p>
     </div>
     <div class="criteria-grid">
-      <div class="termsheet">
-        <div class="termsheet-head"><div class="t">Target Profile</div><div class="s">Indicative</div></div>
-        <div class="ts-row"><div class="k">Geography</div><div class="v">GTA</div></div>
-        <div class="ts-row"><div class="k">Revenue</div><div class="v">$4M-$8M</div></div>
-        <div class="ts-row"><div class="k">EBITDA</div><div class="v">Up to $3M</div></div>
-        <div class="ts-row"><div class="k">Purchase price</div><div class="v">Up to $10M</div></div>
-        <div class="ts-row"><div class="k">EBITDA multiple</div><div class="v">3.5-4.5x (up to 5.5x)</div></div>
-        <div class="ts-row"><div class="k">Recurring revenue</div><div class="v">35%+ (60%+ target)</div></div>
-        <div class="ts-row"><div class="k">Customer concentration</div><div class="v">No single client &gt;25%</div></div>
-        <div class="ts-row"><div class="k">Seller transition</div><div class="v">12 months minimum</div></div>
-        <div class="ts-row"><div class="k">Management</div><div class="v">Second tier in place, staying on</div></div>
-        <div class="ts-row"><div class="k">Operability</div><div class="v">Asset-light, remote-operable</div></div>
-        <div class="ts-row"><div class="k">Real estate</div><div class="v">Open to including or leasing back - not required</div></div>
-      </div>
       <div>
-        <div class="kicker" style="margin-bottom:14px;">Industries of interest</div>
+        <div class="kicker" style="margin-bottom:14px;">Particular interest</div>
         <div class="chip-row">
           <div class="chip">Building &amp; facilities services</div>
           <div class="chip">Commercial landscaping &amp; grounds maintenance</div>
           <div class="chip">Managed IT (MSP, niche vertical)</div>
         </div>
-        <div class="kicker" style="margin:22px 0 14px;">Considered opportunistically</div>
+      </div>
+      <div>
+        <div class="kicker" style="margin-bottom:14px;">Not a fit</div>
         <div class="chip-row">
-          <div class="chip">Fire &amp; life safety inspection &amp; testing</div>
-          <div class="chip">Training, certification &amp; inspection</div>
-        </div>
-        <div class="kicker" style="margin:22px 0 14px;">Not a fit right now</div>
-        <div class="chip-row">
-          <div class="chip avoid">Retail &amp; restaurants</div>
-          <div class="chip avoid">Construction &amp; capital-intensive manufacturing</div>
-          <div class="chip avoid">Marketing / creative agencies</div>
-          <div class="chip avoid">Consumer e-commerce</div>
-          <div class="chip avoid">Accounting &amp; compliance services</div>
-          <div class="chip avoid">Staffing (all forms)</div>
+          <div class="chip avoid">Retail</div>
+          <div class="chip avoid">Oil &amp; gas and commodities</div>
+          <div class="chip avoid">Capital-intensive businesses</div>
         </div>
       </div>
     </div>
