@@ -121,3 +121,70 @@ test("manual lineup: pairs, sub by name, 'out' opens the slot, spare accept fill
   assert.equal(st.lineup.slots[0].userId, subId);
   assert.equal(svc.membersOf(A.id).find((m) => m.id === subId)?.role, "spare");
 });
+
+import { computeRatings } from "../src/lib/ratings";
+import { buildLineup } from "../src/lib/lineup";
+
+test("ratings: zero-sum, upsets move more, partner strength matters", () => {
+  const seeds = new Map([[1, 1200], [2, 1200], [3, 1000], [4, 1000]]);
+  // expected result, better than expected: strong pair beats weak pair 6-0
+  const exp = computeRatings(seeds, [[{ a: [1, 2], b: [3, 4], aScore: 6, bScore: 0 }]]);
+  // upset: weak pair beats strong pair 6-2
+  const ups = computeRatings(seeds, [[{ a: [1, 2], b: [3, 4], aScore: 2, bScore: 6 }]]);
+  assert.ok(exp.get(1)!.rating > 1200 && exp.get(3)!.rating < 1000);
+  assert.ok(ups.get(3)!.rating - 1000 > exp.get(1)!.rating - 1200, "upset win is worth more than expected win");
+  const sum = (m: Map<number, { rating: number }>) => [...m.values()].reduce((s, x) => s + x.rating, 0);
+  assert.ok(Math.abs(sum(exp) - 4400) < 1e-6, "ratings are conserved");
+  // partner matters: same opponents, weak player with strong partner is expected to win more → gains less than with weak partner
+  const weakPartner = computeRatings(new Map([[1, 1000], [2, 1000], [3, 1000], [4, 1400]]), [[{ a: [1, 2], b: [3, 4], aScore: 6, bScore: 4 }]]);
+  assert.ok(weakPartner.get(1)!.rating > 1000 + 0 && weakPartner.get(4)!.rating < 1400);
+});
+
+test("lineup by skill: best two on court 1, bench chosen by rotation", () => {
+  const cands = [
+    { userId: 1, rank: 1, status: "in" as const, skill: 900, priority: 0 },
+    { userId: 2, rank: 2, status: "in" as const, skill: 1300, priority: 0 },
+    { userId: 3, rank: 3, status: "in" as const, skill: 1100, priority: 0 },
+    { userId: 4, rank: 4, status: "in" as const, skill: 1500, priority: 0 },
+    { userId: 5, rank: 5, status: "in" as const, skill: 1000, priority: 0 },
+    { userId: 6, rank: 6, status: "in" as const, skill: 1200, priority: 0 },
+    { userId: 7, rank: 7, status: "in" as const, skill: 1600, priority: 3 }, // played a lot lately → sits
+  ];
+  const r = buildLineup(cands, 3, "doubles", true);
+  assert.deepEqual(r.bench, [7]);
+  assert.deepEqual(r.slots.map((s) => s.userId), [4, 2, 6, 3, 5, 1]); // court1: 4,2  court2: 6,3  court3: 5,1
+  assert.deepEqual(r.slots.map((s) => s.line), [1, 1, 2, 2, 3, 3]);
+});
+
+test("league e2e: scores mirror to opponent, ratings change, next week court 1 = best two available", () => {
+  const org = db().prepare("INSERT INTO users (email,name) VALUES ('o3@x.com','O3') RETURNING *").get() as User;
+  const { id } = svc.createLeagueFromRoster(org, "L3", 3, "19:00", SHEET);
+  const [A, B] = svc.leagueTeams(id);
+  const lg = svc.getLeague(id)!;
+  svc.createRound(lg, "2031-02-03", [{ a: A.id, b: B.id, time: "19:00", courts: 3 }]);
+  svc.createRound(lg, "2031-02-10", [{ a: A.id, b: B.id, time: "19:00", courts: 3 }]);
+  const r = svc.leagueRounds(id);
+  const gA1 = r[0].matchups[0].games.find((g) => g.team_id === A.id)!, gB1 = r[0].matchups[0].games.find((g) => g.team_id === B.id)!;
+  const ma = svc.membersOf(A.id), mb = svc.membersOf(B.id);
+  for (const m of ma) svc.setStatus(gA1.id, m.id, "in");
+  for (const m of mb) svc.setStatus(gB1.id, m.id, "in");
+  svc.saveLineup(gA1.id, ma.slice(0, 6).map((m) => m.id));
+  svc.saveLineup(gB1.id, mb.slice(0, 6).map((m) => m.id));
+  svc.saveResults(gA1.id, [{ court: 1, forScore: 6, againstScore: 1 }, { court: 2, forScore: 6, againstScore: 2 }, { court: 3, forScore: 5, againstScore: 6 }]);
+  assert.equal(svc.resultsFor(gB1.id)[0].for_score, 1); // mirrored & swapped
+  const ratings = svc.leagueRatings(id);
+  assert.ok(ratings.get(ma[0].id)!.rating > 1000, "court-1 winners go up");
+  assert.ok(ratings.get(mb[0].id)!.rating < 1000, "court-1 losers go down");
+  assert.ok(ratings.get(ma[4].id)!.rating < 1000, "court-3 loser (our side) goes down");
+
+  // week 2: everyone available → team A selected by rotation (benched 3 first), slotted by rating
+  const gA2 = r[1].matchups[0].games.find((g) => g.team_id === A.id)!;
+  db().prepare("UPDATE games SET starts_at='2000-01-01T19:00' WHERE id IN (?,?)").run(gA1.id, gB1.id);
+  svc.recordPlayed();
+  for (const m of ma) svc.setStatus(gA2.id, m.id, "in");
+  const st = svc.gameState(gA2.id);
+  const benchedLastTime = ma.slice(6).map((m) => m.id);
+  for (const b of benchedLastTime) assert.ok(st.lineup.slots.some((s) => s.userId === b), "benched players play next");
+  const order = st.lineup.slots.map((s) => ratings.get(s.userId!)?.rating ?? 1000);
+  assert.deepEqual(order, [...order].sort((x, y) => y - x), "court order follows rating");
+});

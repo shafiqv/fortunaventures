@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
-import { createRound, editMatchup, generateSeason, publishRound, saveContacts } from "../../../actions";
+import { createRound, editMatchup, generateSeason, publishRound, saveContacts, setLineupPolicy } from "../../../actions";
 
 export default async function LeagueAdmin({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
@@ -14,6 +14,8 @@ export default async function LeagueAdmin({ params }: { params: Promise<{ id: st
   const players = svc.leaguePlayers(id);
   const missing = players.filter((p) => svc.isPlaceholderEmail(p.email)).length;
   const rounds = svc.leagueRounds(id);
+  const ratings = svc.leagueRatings(id);
+  const ranked = [...players].sort((a, b) => (ratings.get(b.id)?.rating ?? b.seed) - (ratings.get(a.id)?.rating ?? a.seed));
   const matchupSlots = Math.max(1, Math.floor(teams.length / 2));
 
   return (
@@ -24,6 +26,16 @@ export default async function LeagueAdmin({ params }: { params: Promise<{ id: st
         <a className="btn" href={`/api/admin/league/${id}`}>⬇ Download Excel (rosters + lineups)</a>
         <span className="mute">{teams.length} teams · {players.length} players · {league.courts_per_matchup} courts/matchup ({league.courts_per_matchup * 2} players per team)</span>
       </div>
+
+      <h2>How lineups are chosen</h2>
+      <form action={setLineupPolicy.bind(null, id)} className="card row">
+        <select name="policy" defaultValue={teams[0]?.lineup_policy ?? "rotation_rating"} className="grow">
+          <option value="rotation_rating">Fair rotation decides who plays; rating decides the court (court 1 = best two)</option>
+          <option value="rating">Best-rated available players play; rating decides the court</option>
+          <option value="rotation">Fair rotation only (court order by roster order)</option>
+        </select>
+        <button>Save</button>
+      </form>
 
       <h2>Generate the whole season</h2>
       <form action={generateSeason.bind(null, id)} className="card">
@@ -88,15 +100,23 @@ export default async function LeagueAdmin({ params }: { params: Promise<{ id: st
       <h2>Players — add emails & phones {missing > 0 && <span className="pill maybe">{missing} still need an email</span>}</h2>
       <p className="mute">Nobody gets messages until they have an email. Paste them in here, or send players the team invite links below.</p>
       <form action={saveContacts.bind(null, id)} className="card">
-        <table><thead><tr><th>Team</th><th>Player</th><th>Email</th><th>Mobile</th></tr></thead><tbody>
+        <table><thead><tr><th>Team</th><th>Player</th><th>Start rating</th><th>Email</th><th>Mobile</th></tr></thead><tbody>
           {players.map((p) => (
             <tr key={p.id}><td className="mute">{p.team}</td><td>{p.name}</td>
+              <td><input name={`seed_${p.id}`} type="number" defaultValue={p.seed} style={{ width: 80 }} /></td>
               <td><input name={`email_${p.id}`} type="email" defaultValue={svc.isPlaceholderEmail(p.email) ? "" : p.email} placeholder="email" style={{ width: "100%" }} /></td>
               <td><input name={`phone_${p.id}`} type="tel" defaultValue={p.phone} placeholder="+1…" style={{ width: 130 }} /></td></tr>
           ))}
         </tbody></table>
         <p><button>Save contacts</button></p>
       </form>
+
+      <h2>Player ratings</h2>
+      <div className="card"><table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>Rating</th><th>Matches</th></tr></thead><tbody>
+        {ranked.map((p, i) => { const r = ratings.get(p.id); return (
+          <tr key={p.id}><td>{i + 1}</td><td>{p.name}</td><td className="mute">{p.team}</td><td><b>{Math.round(r?.rating ?? p.seed)}</b></td><td className="mute">{r?.games ?? 0}</td></tr>); })}
+      </tbody></table>
+      <p className="mute">Ratings start from the number above (default 1000) and move after every scored court, based on the score, your partner's rating and your opponents' ratings.</p></div>
 
       <h2>Teams</h2>
       {teams.map((t) => <div key={t.id} className="card row"><Link className="grow" href={`/teams/${t.id}`}>{t.name}</Link><span className="mute">invite link: /join/{t.invite_code}</span></div>)}

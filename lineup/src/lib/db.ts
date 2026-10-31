@@ -20,6 +20,7 @@ export function db(): Database.Database {
     "ALTER TABLE games ADD COLUMN matchup_id INTEGER",
     "ALTER TABLE games ADD COLUMN played_recorded INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE responses ADD COLUMN played INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE members ADD COLUMN seed INTEGER NOT NULL DEFAULT 1000",
   ]) { try { d.exec(sql); } catch { /* column already exists */ } }
   g.__db = d;
   return d;
@@ -95,6 +96,14 @@ CREATE TABLE IF NOT EXISTS lineup_slots (
   user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   PRIMARY KEY (game_id, position)
 );
+CREATE TABLE IF NOT EXISTS results (
+  game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  court INTEGER NOT NULL,
+  for_score INTEGER NOT NULL,
+  against_score INTEGER NOT NULL,
+  p1 INTEGER, p2 INTEGER,               -- who actually played this court (snapshot when the score is saved)
+  PRIMARY KEY (game_id, court)
+);
 CREATE TABLE IF NOT EXISTS spare_offers (
   id INTEGER PRIMARY KEY,
   game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -110,7 +119,7 @@ CREATE TABLE IF NOT EXISTS spare_offers (
 export type Team = {
   id: number; name: string; sport: string; format: "singles" | "doubles"; lines: number;
   invite_code: string; request_business_days: number; reminder_days: number; spares_days: number;
-  summary_days: number; league_id: number | null; lineup_policy: "rank" | "rotation"; spare_mode: "rolling" | "first_come"; spare_expiry_hours: number; auto_spares: number;
+  summary_days: number; league_id: number | null; lineup_policy: "rank" | "rotation" | "rotation_rating" | "rating"; spare_mode: "rolling" | "first_come"; spare_expiry_hours: number; auto_spares: number;
 };
 export type User = { id: number; email: string; name: string; phone: string; sms_opt_in: number };
 export type Game = {

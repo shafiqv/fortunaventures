@@ -155,6 +155,8 @@ export async function saveContacts(leagueId: number, f: FormData) {
   for (const p of svc.leaguePlayers(leagueId)) {
     const email = str(f, `email_${p.id}`), phone = str(f, `phone_${p.id}`);
     if (email || phone) svc.setContact(p.id, email, phone);
+    const seed = Number(f.get(`seed_${p.id}`));
+    if (Number.isFinite(seed) && seed >= 100 && seed <= 3000 && seed !== p.seed) svc.setSeed(p.id, leagueId, Math.round(seed));
   }
   revalidatePath(`/admin/leagues/${leagueId}`);
 }
@@ -205,4 +207,23 @@ export async function addSubAction(teamId: number, gameId: number, f: FormData) 
   await captainOf(teamId);
   if (str(f, "name")) svc.addSub(gameId, str(f, "name"), str(f, "email"));
   revalidatePath(`/teams/${teamId}/games/${gameId}`);
+}
+
+export async function saveResultsAction(teamId: number, gameId: number, courts: number, f: FormData) {
+  await captainOf(teamId);
+  const scores: { court: number; forScore: number; againstScore: number }[] = [];
+  for (let c = 1; c <= courts; c++) {
+    const a = f.get(`for_${c}`), b = f.get(`against_${c}`);
+    if (a === null || b === null || a === "" || b === "") continue;
+    scores.push({ court: c, forScore: Math.max(0, Number(a)), againstScore: Math.max(0, Number(b)) });
+  }
+  if (scores.length) svc.saveResults(gameId, scores);
+  revalidatePath(`/teams/${teamId}/games/${gameId}`);
+}
+
+export async function setLineupPolicy(leagueId: number, f: FormData) {
+  await organizerOf(leagueId);
+  const pol = ["rotation_rating", "rating", "rotation"].includes(str(f, "policy")) ? str(f, "policy") : "rotation_rating";
+  db().prepare("UPDATE teams SET lineup_policy=? WHERE league_id=?").run(pol, leagueId);
+  revalidatePath(`/admin/leagues/${leagueId}`);
 }

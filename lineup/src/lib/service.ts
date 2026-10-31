@@ -100,13 +100,16 @@ export function gameState(gameId: number) {
   const team = getTeam(game.team_id)!;
   const rows = responsesFor(gameId);
   const played = new Map<number, number>();
-  if (team.lineup_policy === "rotation")
+  const bySkill = team.lineup_policy === "rating" || team.lineup_policy === "rotation_rating";
+  const useRotation = team.lineup_policy === "rotation" || team.lineup_policy === "rotation_rating";
+  const ratings = bySkill ? ratingsForTeam(team) : new Map<number, { rating: number; games: number }>();
+  if (useRotation)
     for (const r of db().prepare(
       "SELECT r.user_id u, COUNT(*) c FROM responses r JOIN games g ON g.id=r.game_id WHERE g.team_id=? AND r.played=1 AND g.id!=? GROUP BY r.user_id",
     ).all(game.team_id, gameId) as { u: number; c: number }[]) played.set(r.u, r.c);
   const lineup = buildLineup(
-    rows.map((r) => ({ userId: r.user_id, rank: r.rank, status: r.status, priority: team.lineup_policy === "rotation" ? played.get(r.user_id) ?? 0 : 0 })),
-    game.lines ?? team.lines, team.format);
+    rows.map((r) => ({ userId: r.user_id, rank: r.rank, status: r.status, priority: useRotation ? played.get(r.user_id) ?? 0 : 0, skill: bySkill ? ratings.get(r.user_id)?.rating ?? seedOf(team.id, r.user_id) : undefined })),
+    game.lines ?? team.lines, team.format, bySkill);
   const manual = db().prepare("SELECT position, user_id FROM lineup_slots WHERE game_id=?").all(gameId) as { position: number; user_id: number | null }[];
   if (manual.length) {
     // Organizer-curated lineup: a placed player who later says "out" leaves an OPEN slot (so spares get called).
@@ -124,6 +127,63 @@ export function gameState(gameId: number) {
   }
   return { game, team, rows, lineup };
 }
+
+// ---------- results & ratings ----------
+const seedOf = (teamId: number, userId: number) =>
+  (db().prepare("SELECT seed FROM members WHERE team_id=? AND user_id=?").get(teamId, userId) as { seed: number } | undefined)?.seed ?? START_RATING;
+
+/** Ratings for everyone in a team's league, rebuilt from all saved results in date order. */
+export function ratingsForTeam(team: Team) {
+  if (!team.league_id) return new Map<number, { rating: number; games: number }>();
+  return leagueRatings(team.league_id);
+}
+
+export function leagueRatings(leagueId: number) {
+  const d = db();
+  const seeds = new Map<number, number>();
+  for (const m of d.prepare("SELECT m.user_id u, m.seed s FROM members m JOIN teams t ON t.id=m.team_id WHERE t.league_id=?").all(leagueId) as { u: number; s: number }[]) seeds.set(m.u, m.s);
+  const games = d.prepare(
+    `SELECT g.id, g.matchup_id, g.starts_at FROM games g JOIN teams t ON t.id=g.team_id
+     WHERE t.league_id=? AND g.matchup_id IS NOT NULL AND EXISTS (SELECT 1 FROM results r WHERE r.game_id=g.id) ORDER BY g.starts_at, g.matchup_id, g.id`,
+  ).all(leagueId) as { id: number; matchup_id: number; starts_at: string }[];
+  const byMatchup = new Map<number, number[]>();
+  for (const g of games) byMatchup.set(g.matchup_id, [...(byMatchup.get(g.matchup_id) ?? []), g.id]);
+  const rows = d.prepare("SELECT court, for_score, against_score, p1, p2 FROM results WHERE game_id=?");
+  const matchups: CourtResult[][] = [];
+  for (const [, ids] of byMatchup) {
+    if (ids.length < 2) continue;
+    const A = rows.all(ids[0]) as { court: number; for_score: number; against_score: number; p1: number | null; p2: number | null }[];
+    const B = rows.all(ids[1]) as typeof A;
+    matchups.push(A.map((a) => {
+      const b = B.find((x) => x.court === a.court);
+      return { a: [a.p1, a.p2].filter(Boolean) as number[], b: b ? ([b.p1, b.p2].filter(Boolean) as number[]) : [], aScore: a.for_score, bScore: a.against_score };
+    }));
+  }
+  return computeRatings(seeds, matchups);
+}
+
+/** Save court scores from one team's point of view; mirror them (swapped) onto the opposing team's game. Snapshots who played. */
+export function saveResults(gameId: number, scores: { court: number; forScore: number; againstScore: number }[]) {
+  const d = db();
+  const g = getGame(gameId)!;
+  const sib = g.matchup_id ? (d.prepare("SELECT id FROM games WHERE matchup_id=? AND id!=?").get(g.matchup_id, gameId) as { id: number } | undefined) : undefined;
+  const snap = (gid: number) => {
+    const { lineup, team } = gameState(gid);
+    const per = team.format === "doubles" ? 2 : 1;
+    return (court: number) => lineup.slots.filter((s) => s.line === court).slice(0, per).map((s) => s.userId);
+  };
+  const mine = snap(gameId), theirs = sib ? snap(sib.id) : () => [null, null];
+  const ins = d.prepare("INSERT OR REPLACE INTO results (game_id,court,for_score,against_score,p1,p2) VALUES (?,?,?,?,?,?)");
+  d.transaction(() => {
+    for (const s of scores) {
+      const [a1, a2] = mine(s.court);
+      ins.run(gameId, s.court, s.forScore, s.againstScore, a1 ?? null, a2 ?? null);
+      if (sib) { const [b1, b2] = theirs(s.court); ins.run(sib.id, s.court, s.againstScore, s.forScore, b1 ?? null, b2 ?? null); }
+    }
+  })();
+}
+export const resultsFor = (gameId: number) =>
+  db().prepare("SELECT court, for_score, against_score FROM results WHERE game_id=? ORDER BY court").all(gameId) as { court: number; for_score: number; against_score: number }[];
 
 // ---------- manual lineups ----------
 export const hasManualLineup = (gameId: number) => !!db().prepare("SELECT 1 FROM lineup_slots WHERE game_id=? LIMIT 1").get(gameId);
@@ -295,6 +355,7 @@ export function runSparesLater(gameId: number) {
 // ---------- leagues (organizer layer) ----------
 import { parseRoster } from "./roster";
 import { generateSeason } from "./season";
+import { computeRatings, START_RATING, type CourtResult } from "./ratings";
 import { isPlaceholderEmail } from "./notify";
 import type { League } from "./db";
 
@@ -312,7 +373,7 @@ export function createLeagueFromRoster(organizer: User, name: string, courts: nu
     const lid = Number(d.prepare("INSERT INTO leagues (name, organizer_id, courts_per_matchup, default_time) VALUES (?,?,?,?)").run(name, organizer.id, courts, defaultTime).lastInsertRowid);
     for (const t of parsed.teams) {
       const tid = Number(d.prepare(
-        "INSERT INTO teams (name, sport, format, lines, invite_code, league_id, lineup_policy, spare_mode) VALUES (?, 'tennis', 'doubles', ?, ?, ?, 'rotation', 'rolling')",
+        "INSERT INTO teams (name, sport, format, lines, invite_code, league_id, lineup_policy, spare_mode) VALUES (?, 'tennis', 'doubles', ?, ?, ?, 'rotation_rating', 'rolling')",
       ).run(t.name, courts, newToken(6), lid).lastInsertRowid);
       t.players.forEach((pname, i) => {
         const existing = d.prepare(
@@ -328,6 +389,10 @@ export function createLeagueFromRoster(organizer: User, name: string, courts: nu
 }
 
 /** Set a player's real email/phone. If that email already belongs to a signed-up user, merge into that account. */
+export function setSeed(userId: number, leagueId: number, seed: number) {
+  db().prepare("UPDATE members SET seed=? WHERE user_id=? AND team_id IN (SELECT id FROM teams WHERE league_id=?)").run(seed, userId, leagueId);
+}
+
 export function setContact(userId: number, emailRaw: string, phone: string) {
   const d = db();
   const email = emailRaw.trim().toLowerCase();
@@ -345,9 +410,9 @@ export function setContact(userId: number, emailRaw: string, phone: string) {
 
 export function leaguePlayers(leagueId: number) {
   return db().prepare(
-    `SELECT u.id, u.name, u.email, u.phone, t.name AS team FROM members m JOIN users u ON u.id=m.user_id JOIN teams t ON t.id=m.team_id
+    `SELECT u.id, u.name, u.email, u.phone, t.name AS team, m.seed AS seed FROM members m JOIN users u ON u.id=m.user_id JOIN teams t ON t.id=m.team_id
      WHERE t.league_id=? ORDER BY t.id, m.rank`,
-  ).all(leagueId) as { id: number; name: string; email: string; phone: string; team: string }[];
+  ).all(leagueId) as { id: number; name: string; email: string; phone: string; team: string; seed: number }[];
 }
 export { isPlaceholderEmail };
 

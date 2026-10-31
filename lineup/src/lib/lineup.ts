@@ -12,6 +12,8 @@ export interface Candidate {
   status: Status;
   /** Optional: lower plays first (used for fair rotation). Ties fall back to rank. */
   priority?: number;
+  /** Optional skill rating (higher = better). */
+  skill?: number;
 }
 
 export interface Slot {
@@ -28,14 +30,17 @@ export function buildLineup(
   candidates: Candidate[],
   lines: number,
   format: "singles" | "doubles",
+  /** If true, the people who play are slotted by skill: line 1 = the strongest two, and so on. */
+  slotBySkill = false,
 ) {
   const perLine = format === "doubles" ? 2 : 1;
   const total = lines * perLine;
   const ins = candidates
     .filter((c) => c.status === "in")
-    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.rank - b.rank || a.userId - b.userId);
+    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0) || (b.skill ?? 0) - (a.skill ?? 0) || a.rank - b.rank || a.userId - b.userId);
 
   const playing = ins.slice(0, total);
+  if (slotBySkill) playing.sort((a, b) => (b.skill ?? 0) - (a.skill ?? 0) || a.rank - b.rank || a.userId - b.userId);
   const bench = ins.slice(total).map((c) => c.userId);
 
   const slots: Slot[] = [];

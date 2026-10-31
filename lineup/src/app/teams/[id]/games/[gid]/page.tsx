@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
-import { addSubAction, captainSetStatus, deleteGame, gameAction, lineupMode, saveGame, saveLineupAction } from "../../../../actions";
+import { addSubAction, captainSetStatus, deleteGame, gameAction, lineupMode, saveGame, saveLineupAction, saveResultsAction } from "../../../../actions";
 import type { Status } from "@/lib/lineup";
 
 export default async function GamePage({ params }: { params: Promise<{ id: string; gid: string }> }) {
@@ -17,6 +17,9 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   const offers = svc.offersFor(gameId);
   const nm = (uid: number | null) => { if (uid == null) return <i className="out">OPEN</i>; const r = rows.find((x) => x.user_id === uid)!; return <>{r.name || r.email}</>; };
   const [date, time] = game.starts_at.split("T");
+  const rated = svc.ratingsForTeam(team);
+  const saved = svc.resultsFor(gameId);
+  const courts = lineup.total / (team.format === "doubles" ? 2 : 1);
   const act = (a: "request" | "remind" | "spares" | "summary") => gameAction.bind(null, teamId, gameId, a);
 
   return (
@@ -41,7 +44,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
                     <td key={k}><select name={`slot_${pos}`} defaultValue={cur ?? ""} style={{ width: "100%" }}>
                       <option value="">— open —</option>
                       {[...rows].sort((a, b) => (a.status === "in" ? 0 : 1) - (b.status === "in" ? 0 : 1) || a.rank - b.rank).map((r) => (
-                        <option key={r.user_id} value={r.user_id}>{r.name || r.email} ({r.status === "none" ? "no reply" : r.status})</option>
+                        <option key={r.user_id} value={r.user_id}>{r.name || r.email} ({r.status === "none" ? "no reply" : r.status}){rated.get(r.user_id) ? ` · ${Math.round(rated.get(r.user_id)!.rating)}` : ""}</option>
                       ))}
                     </select></td>
                   );
@@ -59,6 +62,19 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
       <form action={addSubAction.bind(null, teamId, gameId)} className="card row">
         <b>Add a sub</b><input name="name" placeholder="Name" /><input name="email" type="email" placeholder="Email (optional)" /><button>Add</button>
       </form>
+
+      {team.league_id && game.matchup_id && (<>
+        <h2>Results</h2>
+        <form action={saveResultsAction.bind(null, teamId, gameId, courts)} className="card">
+          <p className="mute">Enter the score for each court (ours vs theirs). This updates player ratings, which set next week's court order.</p>
+          <table><tbody>{Array.from({ length: courts }, (_, i) => {
+            const r = saved.find((x) => x.court === i + 1);
+            return (<tr key={i}><td>Court {i + 1}</td>
+              <td><input name={`for_${i + 1}`} type="number" min={0} defaultValue={r?.for_score} style={{ width: 70 }} /></td><td>–</td>
+              <td><input name={`against_${i + 1}`} type="number" min={0} defaultValue={r?.against_score} style={{ width: 70 }} /></td></tr>);
+          })}</tbody></table>
+          <p><button>Save results</button></p>
+        </form></>)}
 
       <h2>Availability</h2>
       <div className="card"><table><tbody>
