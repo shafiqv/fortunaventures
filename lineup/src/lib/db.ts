@@ -89,6 +89,12 @@ CREATE TABLE IF NOT EXISTS responses (
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (game_id, user_id)
 );
+CREATE TABLE IF NOT EXISTS lineup_slots (
+  game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,           -- 1..N ; line = ceil(position / players-per-line)
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  PRIMARY KEY (game_id, position)
+);
 CREATE TABLE IF NOT EXISTS spare_offers (
   id INTEGER PRIMARY KEY,
   game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,

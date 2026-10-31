@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
-import { captainSetStatus, deleteGame, gameAction, saveGame } from "../../../../actions";
+import { addSubAction, captainSetStatus, deleteGame, gameAction, lineupMode, saveGame, saveLineupAction } from "../../../../actions";
 import type { Status } from "@/lib/lineup";
 
 export default async function GamePage({ params }: { params: Promise<{ id: string; gid: string }> }) {
@@ -27,11 +27,38 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
 
       {lineup.shortage > 0 && <div className="banner">⚠ {lineup.shortage} spot(s) open. {game.request_sent ? "" : "Availability hasn't been requested yet."}</div>}
 
-      <h2>Lineup</h2>
-      <div className="card"><table><tbody>
-        {lineup.slots.map((s) => <tr key={s.position}><td>Line {s.line}</td><td>{nm(s.userId)}</td></tr>)}
-        {lineup.bench.length > 0 && <tr><td>Sitting out</td><td>{lineup.bench.map((b, i) => <span key={b}>{i > 0 && ", "}{nm(b)}</span>)}</td></tr>}
-      </tbody></table></div>
+      <h2>Lineup {svc.hasManualLineup(gameId) ? <span className="pill">manual</span> : <span className="pill">automatic</span>}</h2>
+      <form action={saveLineupAction.bind(null, teamId, gameId, lineup.total)} className="card">
+        <table><tbody>
+          {Array.from({ length: lineup.total / (team.format === "doubles" ? 2 : 1) }, (_, li) => {
+            const per = team.format === "doubles" ? 2 : 1;
+            return (
+              <tr key={li}><td style={{ whiteSpace: "nowrap" }}>{team.league_id ? "Court" : "Line"} {li + 1}</td>
+                {Array.from({ length: per }, (_, k) => {
+                  const pos = li * per + k + 1;
+                  const cur = lineup.slots[pos - 1].userId;
+                  return (
+                    <td key={k}><select name={`slot_${pos}`} defaultValue={cur ?? ""} style={{ width: "100%" }}>
+                      <option value="">— open —</option>
+                      {[...rows].sort((a, b) => (a.status === "in" ? 0 : 1) - (b.status === "in" ? 0 : 1) || a.rank - b.rank).map((r) => (
+                        <option key={r.user_id} value={r.user_id}>{r.name || r.email} ({r.status === "none" ? "no reply" : r.status})</option>
+                      ))}
+                    </select></td>
+                  );
+                })}</tr>
+            );
+          })}
+          {lineup.bench.length > 0 && <tr><td>Sitting out</td><td colSpan={2}>{lineup.bench.map((b, i) => <span key={b}>{i > 0 && ", "}{nm(b)}</span>)}</td></tr>}
+        </tbody></table>
+        <p className="row"><button>Save lineup</button></p>
+      </form>
+      <div className="row">
+        <form action={lineupMode.bind(null, teamId, gameId, "freeze")}><button className="ghost">Fill automatically, then let me edit</button></form>
+        <form action={lineupMode.bind(null, teamId, gameId, "auto")}><button className="ghost">Reset to automatic</button></form>
+      </div>
+      <form action={addSubAction.bind(null, teamId, gameId)} className="card row">
+        <b>Add a sub</b><input name="name" placeholder="Name" /><input name="email" type="email" placeholder="Email (optional)" /><button>Add</button>
+      </form>
 
       <h2>Availability</h2>
       <div className="card"><table><tbody>

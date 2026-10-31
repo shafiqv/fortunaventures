@@ -179,3 +179,30 @@ export async function publishRound(leagueId: number, day: string) {
   for (const g of games) { await svc.sendRequests(g, false); db().prepare("UPDATE games SET request_sent=1 WHERE id=?").run(g.id); }
   revalidatePath(`/admin/leagues/${leagueId}`);
 }
+
+export async function generateSeason(leagueId: number, f: FormData) {
+  await organizerOf(leagueId);
+  const league = svc.getLeague(leagueId)!;
+  const holidays = str(f, "holidays").split(/[\s,;]+/).filter(Boolean);
+  svc.generateLeagueSeason(league, str(f, "start"), Math.min(40, Math.max(1, num(f, "weeks", 10))), holidays, str(f, "time") || league.default_time, Math.max(1, num(f, "courts", league.courts_per_matchup)));
+  revalidatePath(`/admin/leagues/${leagueId}`);
+}
+
+export async function saveLineupAction(teamId: number, gameId: number, total: number, f: FormData) {
+  await captainOf(teamId);
+  const ids = Array.from({ length: total }, (_, i) => { const v = Number(f.get(`slot_${i + 1}`)); return v > 0 ? v : null; });
+  svc.saveLineup(gameId, ids);
+  revalidatePath(`/teams/${teamId}/games/${gameId}`);
+}
+
+export async function lineupMode(teamId: number, gameId: number, mode: "auto" | "freeze") {
+  await captainOf(teamId);
+  if (mode === "auto") svc.resetLineup(gameId); else svc.freezeAutoLineup(gameId);
+  revalidatePath(`/teams/${teamId}/games/${gameId}`);
+}
+
+export async function addSubAction(teamId: number, gameId: number, f: FormData) {
+  await captainOf(teamId);
+  if (str(f, "name")) svc.addSub(gameId, str(f, "name"), str(f, "email"));
+  revalidatePath(`/teams/${teamId}/games/${gameId}`);
+}

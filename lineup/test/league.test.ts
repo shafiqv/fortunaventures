@@ -83,3 +83,41 @@ test("league: rounds, per-matchup courts/time, fair rotation, placeholders, exce
   assert.equal(again.teams.length, 2);
   assert.equal(again.teams[0].players.length, 9);
 });
+
+import { generateSeason, roundRobin } from "../src/lib/season";
+test("season generator reproduces the Donalda schedule (Blue,Yellow,White,Green; Thanksgiving off)", () => {
+  const [B, Y, W, G] = [1, 2, 3, 4];
+  const wk = generateSeason([B, Y, W, G], "2026-09-14", 10, ["2026-10-12"]);
+  const pairs = (i: number) => wk[i].pairs.map(([a, b]) => `${Math.min(a, b)}v${Math.max(a, b)}`).sort().join(",");
+  assert.equal(wk[0].date, "2026-09-14");
+  assert.equal(pairs(0), "1v2,3v4"); // Blue-Yellow, White-Green
+  assert.equal(pairs(1), "1v3,2v4"); // Blue-White,  Yellow-Green
+  assert.equal(pairs(2), "1v4,2v3"); // Blue-Green,  White-Yellow
+  assert.equal(pairs(3), "1v2,3v4"); // cycle repeats (week 4)
+  assert.equal(wk[4].holiday, true); // Oct 12 Thanksgiving
+  assert.equal(pairs(5), "1v3,2v4"); // week 6 continues cycle: Blue-White
+  assert.equal(roundRobin([1, 2, 3, 4, 5, 6]).length, 5);
+});
+
+test("manual lineup: pairs, sub by name, 'out' opens the slot, spare accept fills it", async () => {
+  const org = db().prepare("INSERT INTO users (email,name) VALUES ('o2@x.com','O2') RETURNING *").get() as User;
+  const { id } = svc.createLeagueFromRoster(org, "L2", 3, "19:00", SHEET);
+  const [A, B] = svc.leagueTeams(id);
+  svc.createRound(svc.getLeague(id)!, "2031-01-05", [{ a: A.id, b: B.id, time: "19:00", courts: 3 }]);
+  const g = svc.leagueRounds(id)[0].matchups[0].games.find((x) => x.team_id === A.id)!;
+  const ms = svc.membersOf(A.id);
+  for (const m of ms) svc.setStatus(g.id, m.id, "in");
+  svc.saveLineup(g.id, ms.slice(0, 6).map((m) => m.id));
+  let st = svc.gameState(g.id);
+  assert.equal(st.lineup.shortage, 0);
+  assert.equal(st.lineup.slots[1].line, 1); // positions 1+2 = Court 1 pair
+  assert.equal(st.lineup.bench.length, 3);
+  svc.setStatus(g.id, ms[0].id, "out"); // a placed player drops
+  st = svc.gameState(g.id);
+  assert.equal(st.lineup.shortage, 1);
+  const subId = svc.addSub(g.id, "Steve Chaimberg (Sub)", ""); // fills the vacated slot
+  st = svc.gameState(g.id);
+  assert.equal(st.lineup.shortage, 0);
+  assert.equal(st.lineup.slots[0].userId, subId);
+  assert.equal(svc.membersOf(A.id).find((m) => m.id === subId)?.role, "spare");
+});

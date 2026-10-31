@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
-import { createRound, editMatchup, publishRound, saveContacts } from "../../../actions";
+import { createRound, editMatchup, generateSeason, publishRound, saveContacts } from "../../../actions";
 
 export default async function LeagueAdmin({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
@@ -25,7 +25,20 @@ export default async function LeagueAdmin({ params }: { params: Promise<{ id: st
         <span className="mute">{teams.length} teams · {players.length} players · {league.courts_per_matchup} courts/matchup ({league.courts_per_matchup * 2} players per team)</span>
       </div>
 
-      <h2>Schedule a week</h2>
+      <h2>Generate the whole season</h2>
+      <form action={generateSeason.bind(null, id)} className="card">
+        <p className="mute">Every team plays every other team in a repeating cycle. Holiday weeks take a slot but don't advance the cycle.</p>
+        <div className="row">
+          <div><label>First night</label><input type="date" name="start" required /></div>
+          <div><label>Weeks</label><input type="number" name="weeks" min={1} max={40} defaultValue={10} style={{ width: 80 }} /></div>
+          <div><label>Time</label><input type="time" name="time" defaultValue={league.default_time} /></div>
+          <div><label>Courts</label><input type="number" name="courts" min={1} defaultValue={league.courts_per_matchup} style={{ width: 70 }} /></div>
+        </div>
+        <label>No-match dates (YYYY-MM-DD, comma separated — e.g. Thanksgiving)</label><input name="holidays" placeholder="2026-10-12" style={{ width: "100%" }} />
+        <p><button>Generate schedule</button></p>
+      </form>
+
+      <h2>Schedule a single week</h2>
       <form action={createRound.bind(null, id)} className="card">
         <label>Date</label><input type="date" name="date" required />
         {Array.from({ length: matchupSlots }, (_, i) => (

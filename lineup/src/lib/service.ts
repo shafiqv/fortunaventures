@@ -107,7 +107,74 @@ export function gameState(gameId: number) {
   const lineup = buildLineup(
     rows.map((r) => ({ userId: r.user_id, rank: r.rank, status: r.status, priority: team.lineup_policy === "rotation" ? played.get(r.user_id) ?? 0 : 0 })),
     game.lines ?? team.lines, team.format);
+  const manual = db().prepare("SELECT position, user_id FROM lineup_slots WHERE game_id=?").all(gameId) as { position: number; user_id: number | null }[];
+  if (manual.length) {
+    // Organizer-curated lineup: a placed player who later says "out" leaves an OPEN slot (so spares get called).
+    const perLine = team.format === "doubles" ? 2 : 1;
+    const placed = new Map(manual.map((m) => [m.position, m.user_id]));
+    const statusOf = (uid: number) => rows.find((r) => r.user_id === uid)?.status ?? "none";
+    const slots = Array.from({ length: lineup.total }, (_, i) => {
+      const u = placed.get(i + 1) ?? null;
+      return { position: i + 1, line: Math.floor(i / perLine) + 1, userId: u && statusOf(u) !== "out" ? u : null };
+    });
+    const placedIds = new Set(manual.map((m) => m.user_id).filter(Boolean) as number[]);
+    lineup.slots = slots;
+    lineup.bench = rows.filter((r) => r.status === "in" && !placedIds.has(r.user_id)).map((r) => r.user_id);
+    lineup.shortage = slots.filter((x) => !x.userId).length;
+  }
   return { game, team, rows, lineup };
+}
+
+// ---------- manual lineups ----------
+export const hasManualLineup = (gameId: number) => !!db().prepare("SELECT 1 FROM lineup_slots WHERE game_id=? LIMIT 1").get(gameId);
+
+/** Save the organizer's chosen players per slot (array index = position-1; null = empty). */
+export function saveLineup(gameId: number, userIds: (number | null)[]) {
+  const d = db();
+  d.transaction(() => {
+    d.prepare("DELETE FROM lineup_slots WHERE game_id=?").run(gameId);
+    const seen = new Set<number>();
+    userIds.forEach((u, i) => {
+      if (u && !seen.has(u)) { seen.add(u); d.prepare("INSERT INTO lineup_slots (game_id,position,user_id) VALUES (?,?,?)").run(gameId, i + 1, u); }
+      else d.prepare("INSERT INTO lineup_slots (game_id,position,user_id) VALUES (?,?,NULL)").run(gameId, i + 1);
+    });
+  })();
+}
+export const resetLineup = (gameId: number) => void db().prepare("DELETE FROM lineup_slots WHERE game_id=?").run(gameId);
+
+/** Freeze the current automatic suggestion into an editable manual lineup. */
+export function freezeAutoLineup(gameId: number) {
+  resetLineup(gameId);
+  const { lineup } = gameState(gameId);
+  saveLineup(gameId, lineup.slots.map((s) => s.userId));
+}
+
+/** Put a player into the first empty (or vacated-by-"out") slot of a manual lineup. */
+export function fillOpenSlot(gameId: number, userId: number) {
+  if (!hasManualLineup(gameId)) return;
+  const d = db();
+  const slots = d.prepare("SELECT position, user_id FROM lineup_slots WHERE game_id=? ORDER BY position").all(gameId) as { position: number; user_id: number | null }[];
+  if (slots.some((x) => x.user_id === userId)) return;
+  const statusOf = (u: number) => (d.prepare("SELECT status FROM responses WHERE game_id=? AND user_id=?").get(gameId, u) as { status: string } | undefined)?.status;
+  const open = slots.find((x) => !x.user_id || statusOf(x.user_id) === "out");
+  if (open) d.prepare("UPDATE lineup_slots SET user_id=? WHERE game_id=? AND position=?").run(userId, gameId, open.position);
+}
+
+/** Add a one-off sub by name (email optional) — they join the team as a spare and are marked "in" for this game. */
+export function addSub(gameId: number, name: string, email: string) {
+  const g = getGame(gameId)!;
+  const d = db();
+  const e = email.trim().toLowerCase();
+  let u = e ? (d.prepare("SELECT * FROM users WHERE email=?").get(e) as User | undefined) : undefined;
+  if (!u) {
+    const em = e || `pending-${newToken(8).toLowerCase()}@placeholder.invalid`;
+    d.prepare("INSERT INTO users (email, name) VALUES (?,?)").run(em, name.trim());
+    u = d.prepare("SELECT * FROM users WHERE email=?").get(em) as User;
+  }
+  d.prepare("INSERT OR IGNORE INTO members (team_id,user_id,role,rank) VALUES (?,?, 'spare', 99)").run(g.team_id, u.id);
+  setStatus(gameId, u.id, "in");
+  fillOpenSlot(gameId, u.id);
+  return u.id;
 }
 
 // ---------- outbound messages ----------
@@ -215,6 +282,7 @@ export function respondToOffer(token: string, accept: boolean): "accepted" | "de
     }
     d.prepare("UPDATE spare_offers SET status='accepted' WHERE id=?").run(o.id);
     setStatus(o.game_id, o.user_id, "in");
+    fillOpenSlot(o.game_id, o.user_id);
     return "accepted" as const;
   })();
 }
@@ -226,6 +294,7 @@ export function runSparesLater(gameId: number) {
 
 // ---------- leagues (organizer layer) ----------
 import { parseRoster } from "./roster";
+import { generateSeason } from "./season";
 import { isPlaceholderEmail } from "./notify";
 import type { League } from "./db";
 
@@ -299,6 +368,14 @@ export function createRound(league: League, date: string, matchups: { a: number;
     }
   })();
   return made;
+}
+
+export function generateLeagueSeason(league: League, start: string, weeks: number, holidays: string[], time: string, courts: number) {
+  const teams = leagueTeams(league.id).map((t) => t.id);
+  const season = generateSeason(teams, start, weeks, holidays);
+  let made = 0;
+  for (const w of season) if (!w.holiday && w.pairs.length) made += createRound(league, w.date, w.pairs.map(([a, b]) => ({ a, b, time, courts })));
+  return { weeks: season.filter((w) => !w.holiday).length, matchups: made };
 }
 
 export function updateMatchup(matchupId: number, time: string, courts: number) {
