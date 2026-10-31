@@ -64,3 +64,28 @@ test("ics import", () => {
   assert.equal(games[0].startsAt, "2026-11-05T13:40");
   assert.equal(games[0].location, "Granite Club, Toronto");
 });
+
+import { parseLeagueTo } from "../src/lib/csv";
+test("leagueto paste: infers our team and home/away", () => {
+  const txt = `UPCOMING MATCHES
+Sat, Oct 31, 26 @1:40pm
+on Court
+(H) Mayfair Lakeshore
+(A) Donalda Club
+Sat, Nov 7, 26 @1:40pm
+on Court
+(H) Donalda Club
+(A) Toronto Athletic Club
+Sat, Nov 14, 26 @1:40pm
+on Court
+(H) Donalda Club
+(A) Squashabout 1`;
+  const { games, errors } = parseLeagueTo(txt);
+  assert.deepEqual(errors, []);
+  assert.equal(games.length, 3);
+  assert.deepEqual(games.map((g) => [g.startsAt, g.opponent, g.location]), [
+    ["2026-10-31T13:40", "Mayfair Lakeshore", "Away – at Mayfair Lakeshore"],
+    ["2026-11-07T13:40", "Toronto Athletic Club", "Home"],
+    ["2026-11-14T13:40", "Squashabout 1", "Home"],
+  ]);
+});

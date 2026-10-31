@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { endSession, requestLogin, requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
-import { parseIcs, parseScheduleText } from "@/lib/csv";
+import { parseIcs, parseLeagueTo, parseScheduleText } from "@/lib/csv";
 import type { Status } from "@/lib/lineup";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -79,7 +79,9 @@ export async function importSchedule(teamId: number, _: unknown, f: FormData): P
     } catch { return { msg: "Couldn't fetch that URL." }; }
   }
   if (!text) return { msg: "Paste a schedule, upload a file, or give a calendar URL." };
-  const parsed = text.includes("BEGIN:VCALENDAR") ? parseIcs(text) : parseScheduleText(text);
+  const parsed = text.includes("BEGIN:VCALENDAR") ? parseIcs(text)
+    : /^\s*\([HA]\)\s/im.test(text) ? parseLeagueTo(text, str(f, "own_name"))
+    : parseScheduleText(text);
   const res = parsed.games.length ? svc.importGames(teamId, parsed.games) : { added: 0, skipped: 0 };
   revalidatePath(`/teams/${teamId}`);
   return { msg: `Added ${res.added} game(s), skipped ${res.skipped} duplicate(s).${parsed.errors.length ? " Problems: " + parsed.errors.join(" ") : ""}` };

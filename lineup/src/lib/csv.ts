@@ -114,3 +114,58 @@ export function parseIcs(text: string) {
   }
   return { games, errors: games.length ? [] : ["No events found in that calendar."] };
 }
+
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/**
+ * LeagueTO-style paste (copied from a team's "Upcoming Matches" page):
+ *   Sat, Oct 31, 26 @1:40pm / on Court / (H) Mayfair Lakeshore / (A) Donalda Club
+ * Our team is whichever name appears in every block (or `ownName` if given). Home/away comes from (H)/(A).
+ */
+export function parseLeagueTo(text: string, ownName?: string) {
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const dateRe = /^(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{2,4})\s*@\s*(\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?)/i;
+  type Block = { startsAt: string; home?: string; away?: string; note: string };
+  const blocks: Block[] = [];
+  const errors: string[] = [];
+  let cur: Block | null = null;
+  for (const line of lines) {
+    const d = line.match(dateRe);
+    if (d) {
+      const mi = MONTHS.indexOf(d[1].slice(0, 3).toLowerCase());
+      const time = parseTime(d[4]);
+      if (mi < 0 || !time) { errors.push(`Couldn't read "${line}".`); cur = null; continue; }
+      const y = d[3].length === 2 ? 2000 + Number(d[3]) : Number(d[3]);
+      cur = { startsAt: `${y}-${String(mi + 1).padStart(2, "0")}-${d[2].padStart(2, "0")}T${time}`, note: "" };
+      blocks.push(cur);
+      continue;
+    }
+    if (!cur) continue;
+    const t = line.match(/^\(([HA])\)\s*(.+)$/i);
+    if (t) { if (t[1].toUpperCase() === "H") cur.home = t[2].trim(); else cur.away = t[2].trim(); continue; }
+    const on = line.match(/^on\s+(.+)$/i);
+    if (on && !/^court$/i.test(on[1].trim())) cur.note = `Court: ${on[1].trim()}`;
+  }
+  const complete = blocks.filter((b) => b.home && b.away);
+  if (!complete.length) return { games: [] as ParsedGame[], errors: errors.length ? errors : ["Couldn't find any matches in that text."] };
+
+  let own = ownName?.trim();
+  if (!own) {
+    const counts = new Map<string, number>();
+    for (const b of complete) for (const n of [b.home!, b.away!]) counts.set(n, (counts.get(n) ?? 0) + 1);
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    if (complete.length > 1 && top[0][1] === complete.length && top[1]?.[1] !== top[0][1]) own = top[0][0];
+    else errors.push("Couldn't tell which team is yours — type your team's name exactly as it appears on the league site.");
+  }
+  if (!own) return { games: [], errors };
+
+  const games: ParsedGame[] = [];
+  for (const b of complete) {
+    const isHome = b.home!.toLowerCase() === own.toLowerCase();
+    const isAway = b.away!.toLowerCase() === own.toLowerCase();
+    if (!isHome && !isAway) { errors.push(`${b.startsAt.slice(0, 10)}: your team "${own}" isn't in this match.`); continue; }
+    const opp = isHome ? b.away! : b.home!;
+    games.push({ startsAt: b.startsAt, opponent: opp, location: isHome ? "Home" : `Away – at ${opp}`, notes: b.note });
+  }
+  return { games, errors };
+}
