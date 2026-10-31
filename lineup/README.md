@@ -22,6 +22,14 @@ Team availability, lineups and spare waitlists for recreational tennis/squash te
 - **Download Excel**: `Rosters` (same layout as the source sheet) and `Lineups` (every match: lines, bench, out, no-reply).
 - One click sends each player their own team's availability request.
 
+## Try it with a fake league
+    npm install
+    npm run seed:demo      # builds ./data/demo.db: 4 teams, 40 made-up players, 3 nights played, ratings, a short upcoming night
+    npm run demo           # http://localhost:3000 — sign in as demo-organizer@example.com (the link shows on screen)
+Then: open Admin → the league, look at the lineup for the upcoming night (Net Gains is short), click "Contact spares now",
+enter scores on a past game, and download the Excel. Sign in as any player (emails are `first.last@example.com`) to see the player view.
+Emails/texts print to the server console instead of being sent.
+
 ## Run
     cp .env.example .env   # fill in
     npm install
