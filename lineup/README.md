@@ -28,7 +28,10 @@ Team availability, lineups and spare waitlists for recreational tennis/squash te
     npm run dev            # http://localhost:3000   (sign-in link shown on screen in dev)
     npm test
 
+- **Standings** (points = courts won) for organizer and players; benched players are texted/emailed when a spot opens after the lineup is sent.
+
 ## Production
 Needs a Node host with a **persistent disk** for SQLite (Fly.io, Railway, Render). Set the env vars from `.env.example`,
 and have a scheduler call `GET /api/cron?key=$CRON_SECRET` **hourly** — that drives every automatic email/text.
+Deploy files: `Dockerfile`, `deploy/fly.toml.example` (Fly.io with a volume), `deploy/cron-workflow.yml.example` (hourly GitHub Actions trigger).
 Canadian note: get explicit consent before texting (the profile page's opt-in checkbox) per CASL.

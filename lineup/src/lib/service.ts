@@ -150,6 +150,42 @@ export function gameState(gameId: number) {
   return { game, team, rows, lineup };
 }
 
+/** Player answers; if the lineup was already sent and someone benched moves into a playing spot, tell them. */
+export async function respondAndNotify(gameId: number, userId: number, status: Status) {
+  const before = new Set(gameState(gameId).lineup.slots.map((x) => x.userId).filter(Boolean) as number[]);
+  setStatus(gameId, userId, status, true);
+  const { game, team, lineup } = gameState(gameId);
+  if (!game.summary_sent) return;
+  for (const sl of lineup.slots) {
+    if (!sl.userId || before.has(sl.userId)) continue;
+    const u = db().prepare("SELECT * FROM users WHERE id=?").get(sl.userId) as User;
+    await notifyUser(u, `You're playing: ${team.name} – ${prettyWhen(game.starts_at)}`,
+      `A spot opened up and you're now in the lineup.\n${gameLine(game)}${team.league_id ? `\nCourt ${sl.line}` : ""}\n\nCan't make it anymore? Update your answer: ${appUrl()}`,
+      `${team.name}: a spot opened — you're now playing ${prettyWhen(game.starts_at)}${team.league_id ? ` (court ${sl.line})` : ""}.`);
+  }
+}
+
+export interface StandingRow { teamId: number; name: string; played: number; won: number; lost: number; drawn: number; courtsWon: number; courtsLost: number; gamesFor: number; gamesAgainst: number }
+
+/** League table. A "point" is a court won (best of 3 sets / match tie-break); ties broken by game difference. */
+export function standings(leagueId: number): StandingRow[] {
+  const d = db();
+  const teams = leagueTeams(leagueId);
+  const rows = new Map<number, StandingRow>(teams.map((t) => [t.id, { teamId: t.id, name: t.name, played: 0, won: 0, lost: 0, drawn: 0, courtsWon: 0, courtsLost: 0, gamesFor: 0, gamesAgainst: 0 }]));
+  const games = d.prepare(
+    "SELECT g.id, g.team_id FROM games g JOIN teams t ON t.id=g.team_id WHERE t.league_id=? AND EXISTS (SELECT 1 FROM results r WHERE r.game_id=g.id)",
+  ).all(leagueId) as { id: number; team_id: number }[];
+  for (const g of games) {
+    const row = rows.get(g.team_id)!;
+    const cs = d.prepare("SELECT for_score f, against_score a FROM results WHERE game_id=?").all(g.id) as { f: number; a: number }[];
+    let cw = 0, cl = 0;
+    for (const c of cs) { row.gamesFor += c.f; row.gamesAgainst += c.a; if (c.f > c.a) cw++; else if (c.a > c.f) cl++; }
+    row.courtsWon += cw; row.courtsLost += cl; row.played++;
+    if (cw > cl) row.won++; else if (cl > cw) row.lost++; else row.drawn++;
+  }
+  return [...rows.values()].sort((a, b) => b.courtsWon - a.courtsWon || (b.gamesFor - b.gamesAgainst) - (a.gamesFor - a.gamesAgainst) || a.name.localeCompare(b.name));
+}
+
 // ---------- results & ratings ----------
 const seedOf = (teamId: number, userId: number) =>
   (db().prepare("SELECT seed FROM members WHERE team_id=? AND user_id=?").get(teamId, userId) as { seed: number } | undefined)?.seed ?? START_RATING;

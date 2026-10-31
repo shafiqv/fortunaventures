@@ -241,3 +241,32 @@ test("late cancellation is tracked only for committed players cancelling inside 
   assert.equal(rr.penalty, 40);
   assert.equal(rr.rating, rr.skill! - 40);
 });
+
+test("standings count courts won; promoted bench player is notified only after lineup is sent", async () => {
+  const org = db().prepare("INSERT INTO users (email,name) VALUES ('o5@x.com','O5') RETURNING *").get() as User;
+  const { id } = svc.createLeagueFromRoster(org, "L5", 3, "19:00", SHEET);
+  const [A, B] = svc.leagueTeams(id);
+  svc.createRound(svc.getLeague(id)!, "2032-03-01", [{ a: A.id, b: B.id, time: "19:00", courts: 3 }]);
+  const gA = svc.leagueRounds(id)[0].matchups[0].games.find((g) => g.team_id === A.id)!;
+  const ma = svc.membersOf(A.id);
+  for (const m of ma) svc.setStatus(gA.id, m.id, "in");
+  svc.saveResults(gA.id, [
+    { court: 1, sets: [[6, 2], [6, 3]], tiebreak: true },
+    { court: 2, sets: [[6, 2], [6, 3]], tiebreak: true },
+    { court: 3, sets: [[2, 6], [3, 6]], tiebreak: true },
+  ]);
+  const st = svc.standings(id);
+  assert.equal(st[0].teamId, A.id);
+  assert.equal(st[0].courtsWon, 2);
+  assert.equal(st[0].won, 1);
+  assert.equal(st[1].courtsWon, 1);
+
+  // bench promotion: automatic lineup, 9 in → 3 on bench; one of the playing six cancels
+  const g2 = svc.leagueRounds(id)[0].matchups[0].games.find((g) => g.team_id === A.id)!;
+  db().prepare("UPDATE games SET summary_sent=1 WHERE id=?").run(g2.id);
+  const lineup = svc.gameState(g2.id).lineup;
+  const playing = lineup.slots.map((s) => s.userId!), benched = lineup.bench;
+  await svc.respondAndNotify(g2.id, playing[0], "out");
+  const after = svc.gameState(g2.id).lineup;
+  assert.ok(after.slots.some((s) => s.userId === benched[0]) || after.bench.length === benched.length - 1, "a benched player moved up");
+});

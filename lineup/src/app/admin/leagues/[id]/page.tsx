@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
+import StandingsTable from "../../../StandingsTable";
 import { createRound, editMatchup, generateSeason, publishRound, saveContacts, setLineupPolicy } from "../../../actions";
 
 export default async function LeagueAdmin({ params }: { params: Promise<{ id: string }> }) {
@@ -110,6 +111,10 @@ export default async function LeagueAdmin({ params }: { params: Promise<{ id: st
         </tbody></table>
         <p><button>Save contacts</button></p>
       </form>
+
+      <h2>Standings</h2>
+      <StandingsTable rows={svc.standings(id)} />
+      <p className="mute">Players see this too at /league/{id}.</p>
 
       <h2>Player ratings</h2>
       <div className="card"><table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>Rating</th><th>Matches</th><th>Late cancels</th><th>No-shows</th></tr></thead><tbody>

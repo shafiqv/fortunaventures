@@ -120,7 +120,7 @@ export async function gameAction(teamId: number, gameId: number, action: "reques
 export async function respond(token: string, status: Status) {
   const r = db().prepare("SELECT game_id, user_id FROM responses WHERE token=?").get(token) as { game_id: number; user_id: number } | undefined;
   if (!r || !["in", "out", "maybe"].includes(status)) return;
-  svc.setStatus(r.game_id, r.user_id, status, true); // player's own answer: late cancels are tracked
+  await svc.respondAndNotify(r.game_id, r.user_id, status); // player's own answer: late cancels tracked, promoted bench players told
   svc.runSparesLater(r.game_id);
   revalidatePath(`/r/${token}`);
 }

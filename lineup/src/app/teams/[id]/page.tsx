@@ -22,6 +22,7 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
     <>
       <h1>{team.name}</h1>
       <p className="mute">{team.sport} · {team.format} · {team.lines} lines · you are {role}</p>
+      {team.league_id && <p><Link href={`/league/${team.league_id}`}>🏆 League standings →</Link></p>}
       <CalendarCta teamId={id} calToken={svc.calToken(user.id)} />
 
       <h2>Upcoming games</h2>

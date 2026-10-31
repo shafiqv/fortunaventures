@@ -1,0 +1,21 @@
+# fly launch --no-deploy  (then copy settings), fly volumes create lineup_data --size 1
+app = "your-app-name"
+primary_region = "yyz"
+
+[build]
+
+[env]
+  APP_URL = "https://your-domain.ca"
+
+[[mounts]]
+  source = "lineup_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"   # keep running so scheduled emails/texts fire
+  min_machines_running = 1
+
+# Secrets (fly secrets set ...): SESSION_SECRET, CRON_SECRET, RESEND_API_KEY, EMAIL_FROM,
+#                                TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM
