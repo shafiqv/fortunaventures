@@ -27,6 +27,8 @@ export function membersOf(teamId: number): Member[] {
 }
 
 export function roleOf(teamId: number, userId: number) {
+  const org = db().prepare("SELECT 1 FROM teams t JOIN leagues l ON l.id=t.league_id WHERE t.id=? AND l.organizer_id=?").get(teamId, userId);
+  if (org) return "captain"; // league organizers can manage every team in their league
   return (db().prepare("SELECT role FROM members WHERE team_id=? AND user_id=?").get(teamId, userId) as { role: string } | undefined)?.role ?? null;
 }
 export const isCaptain = (teamId: number, userId: number) => roleOf(teamId, userId) === "captain";
@@ -97,7 +99,14 @@ export function gameState(gameId: number) {
   const game = getGame(gameId)!;
   const team = getTeam(game.team_id)!;
   const rows = responsesFor(gameId);
-  const lineup = buildLineup(rows.map((r) => ({ userId: r.user_id, rank: r.rank, status: r.status })), team.lines, team.format);
+  const played = new Map<number, number>();
+  if (team.lineup_policy === "rotation")
+    for (const r of db().prepare(
+      "SELECT r.user_id u, COUNT(*) c FROM responses r JOIN games g ON g.id=r.game_id WHERE g.team_id=? AND r.played=1 AND g.id!=? GROUP BY r.user_id",
+    ).all(game.team_id, gameId) as { u: number; c: number }[]) played.set(r.u, r.c);
+  const lineup = buildLineup(
+    rows.map((r) => ({ userId: r.user_id, rank: r.rank, status: r.status, priority: team.lineup_policy === "rotation" ? played.get(r.user_id) ?? 0 : 0 })),
+    game.lines ?? team.lines, team.format);
   return { game, team, rows, lineup };
 }
 
@@ -215,10 +224,120 @@ export function runSparesLater(gameId: number) {
   runSpares(gameId).catch((e) => console.error("runSpares", e));
 }
 
+// ---------- leagues (organizer layer) ----------
+import { parseRoster } from "./roster";
+import { isPlaceholderEmail } from "./notify";
+import type { League } from "./db";
+
+export const getLeague = (id: number) => db().prepare("SELECT * FROM leagues WHERE id=?").get(id) as League | undefined;
+export const isOrganizer = (leagueId: number, userId: number) => getLeague(leagueId)?.organizer_id === userId;
+export const leaguesOf = (userId: number) => db().prepare("SELECT * FROM leagues WHERE organizer_id=? ORDER BY name").all(userId) as League[];
+export const leagueTeams = (leagueId: number) => db().prepare("SELECT * FROM teams WHERE league_id=? ORDER BY id").all(leagueId) as Team[];
+
+/** Create a league and its teams/players from a pasted roster sheet. Players get placeholder emails until the organizer fills real ones. */
+export function createLeagueFromRoster(organizer: User, name: string, courts: number, defaultTime: string, rosterText: string) {
+  const parsed = parseRoster(rosterText);
+  if (!parsed.teams.length) return { id: 0, errors: parsed.errors };
+  const d = db();
+  const id = d.transaction(() => {
+    const lid = Number(d.prepare("INSERT INTO leagues (name, organizer_id, courts_per_matchup, default_time) VALUES (?,?,?,?)").run(name, organizer.id, courts, defaultTime).lastInsertRowid);
+    for (const t of parsed.teams) {
+      const tid = Number(d.prepare(
+        "INSERT INTO teams (name, sport, format, lines, invite_code, league_id, lineup_policy, spare_mode) VALUES (?, 'tennis', 'doubles', ?, ?, ?, 'rotation', 'rolling')",
+      ).run(t.name, courts, newToken(6), lid).lastInsertRowid);
+      t.players.forEach((pname, i) => {
+        const existing = d.prepare(
+          "SELECT u.id FROM users u JOIN members m ON m.user_id=u.id JOIN teams tt ON tt.id=m.team_id WHERE tt.league_id=? AND lower(u.name)=lower(?)",
+        ).get(lid, pname) as { id: number } | undefined;
+        const uid = existing?.id ?? Number(d.prepare("INSERT INTO users (email, name) VALUES (?,?)").run(`pending-${newToken(8).toLowerCase()}@placeholder.invalid`, pname).lastInsertRowid);
+        d.prepare("INSERT OR IGNORE INTO members (team_id,user_id,role,rank) VALUES (?,?, 'player', ?)").run(tid, uid, i + 1);
+      });
+    }
+    return lid;
+  })();
+  return { id, errors: parsed.errors };
+}
+
+/** Set a player's real email/phone. If that email already belongs to a signed-up user, merge into that account. */
+export function setContact(userId: number, emailRaw: string, phone: string) {
+  const d = db();
+  const email = emailRaw.trim().toLowerCase();
+  if (phone) d.prepare("UPDATE users SET phone=? WHERE id=?").run(phone.trim(), userId);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return;
+  const other = d.prepare("SELECT id FROM users WHERE email=? AND id!=?").get(email, userId) as { id: number } | undefined;
+  if (!other) { d.prepare("UPDATE users SET email=? WHERE id=?").run(email, userId); return; }
+  d.transaction(() => {
+    d.prepare("UPDATE OR IGNORE members SET user_id=? WHERE user_id=?").run(other.id, userId);
+    d.prepare("UPDATE OR IGNORE responses SET user_id=? WHERE user_id=?").run(other.id, userId);
+    d.prepare("UPDATE users SET name=CASE WHEN name='' THEN (SELECT name FROM users WHERE id=?) ELSE name END WHERE id=?").run(userId, other.id);
+    d.prepare("DELETE FROM users WHERE id=?").run(userId);
+  })();
+}
+
+export function leaguePlayers(leagueId: number) {
+  return db().prepare(
+    `SELECT u.id, u.name, u.email, u.phone, t.name AS team FROM members m JOIN users u ON u.id=m.user_id JOIN teams t ON t.id=m.team_id
+     WHERE t.league_id=? ORDER BY t.id, m.rank`,
+  ).all(leagueId) as { id: number; name: string; email: string; phone: string; team: string }[];
+}
+export { isPlaceholderEmail };
+
+/** One round = a date with several matchups; each creates a game for BOTH teams. */
+export function createRound(league: League, date: string, matchups: { a: number; b: number; time: string; courts: number }[]) {
+  const d = db();
+  let made = 0;
+  d.transaction(() => {
+    for (const m of matchups) {
+      if (!m.a || !m.b || m.a === m.b) continue;
+      const mid = (d.prepare("SELECT COALESCE(MAX(matchup_id),0)+1 AS n FROM games").get() as { n: number }).n;
+      const A = getTeam(m.a)!, B = getTeam(m.b)!;
+      const starts = `${date}T${m.time || league.default_time}`;
+      const ins = d.prepare("INSERT OR IGNORE INTO games (team_id, starts_at, opponent, location, lines, matchup_id) VALUES (?,?,?,?,?,?)");
+      ins.run(A.id, starts, B.name, `${m.courts} courts`, m.courts, mid);
+      ins.run(B.id, starts, A.name, `${m.courts} courts`, m.courts, mid);
+      made++;
+    }
+  })();
+  return made;
+}
+
+export function updateMatchup(matchupId: number, time: string, courts: number) {
+  const g = db().prepare("SELECT starts_at FROM games WHERE matchup_id=? LIMIT 1").get(matchupId) as { starts_at: string } | undefined;
+  if (!g) return;
+  db().prepare("UPDATE games SET starts_at=?, lines=?, location=? WHERE matchup_id=?").run(`${g.starts_at.slice(0, 10)}T${time}`, courts, `${courts} courts`, matchupId);
+}
+
+export function leagueRounds(leagueId: number) {
+  const games = db().prepare(
+    `SELECT g.*, t.name AS team_name FROM games g JOIN teams t ON t.id=g.team_id WHERE t.league_id=? AND g.starts_at>=? ORDER BY g.starts_at, g.matchup_id, g.id`,
+  ).all(leagueId, fmtLocal(new Date(Date.now() - 12 * 3600_000))) as (Game & { team_name: string })[];
+  const byDate = new Map<string, Map<number, (Game & { team_name: string })[]>>();
+  for (const g of games) {
+    const day = g.starts_at.slice(0, 10);
+    if (!byDate.has(day)) byDate.set(day, new Map());
+    const mm = byDate.get(day)!;
+    const key = g.matchup_id ?? g.id;
+    mm.set(key, [...(mm.get(key) ?? []), g]);
+  }
+  return [...byDate.entries()].map(([day, mm]) => ({ day, matchups: [...mm.entries()].map(([id, gs]) => ({ id, games: gs })) }));
+}
+
+/** After a game starts, remember who actually played, so the next lineup rotates fairly. */
+export function recordPlayed(now = new Date()) {
+  const d = db();
+  const past = d.prepare("SELECT id, starts_at FROM games WHERE played_recorded=0 AND starts_at<?").all(fmtLocal(now)) as { id: number; starts_at: string }[];
+  for (const g of past) {
+    const { lineup } = gameState(g.id);
+    for (const sl of lineup.slots) if (sl.userId) d.prepare("UPDATE responses SET played=1 WHERE game_id=? AND user_id=?").run(g.id, sl.userId);
+    d.prepare("UPDATE games SET played_recorded=1 WHERE id=?").run(g.id);
+  }
+}
+
 // ---------- the scheduler tick ----------
 /** Idempotent: call hourly (or more often). */
 export async function tick(now = new Date()) {
   const d = db();
+  recordPlayed(now);
   const games = d.prepare("SELECT * FROM games WHERE starts_at >= ? ORDER BY starts_at")
     .all(fmtLocal(new Date(now.getTime() - 3600_000))) as Game[];
   const log: string[] = [];

@@ -12,7 +12,15 @@ export function db(): Database.Database {
   d.pragma("journal_mode = WAL");
   d.pragma("foreign_keys = ON");
   d.exec(SCHEMA);
-  try { d.exec("ALTER TABLE users ADD COLUMN cal_token TEXT"); } catch { /* already there */ }
+  for (const sql of [
+    "ALTER TABLE users ADD COLUMN cal_token TEXT",
+    "ALTER TABLE teams ADD COLUMN league_id INTEGER",
+    "ALTER TABLE teams ADD COLUMN lineup_policy TEXT NOT NULL DEFAULT 'rank'",
+    "ALTER TABLE games ADD COLUMN lines INTEGER",
+    "ALTER TABLE games ADD COLUMN matchup_id INTEGER",
+    "ALTER TABLE games ADD COLUMN played_recorded INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE responses ADD COLUMN played INTEGER NOT NULL DEFAULT 0",
+  ]) { try { d.exec(sql); } catch { /* column already exists */ } }
   g.__db = d;
   return d;
 }
@@ -30,6 +38,13 @@ CREATE TABLE IF NOT EXISTS login_tokens (
   token_hash TEXT PRIMARY KEY,
   email TEXT NOT NULL,
   expires_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS leagues (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  organizer_id INTEGER NOT NULL REFERENCES users(id),
+  courts_per_matchup INTEGER NOT NULL DEFAULT 3,
+  default_time TEXT NOT NULL DEFAULT '19:00'
 );
 CREATE TABLE IF NOT EXISTS teams (
   id INTEGER PRIMARY KEY,
@@ -89,11 +104,13 @@ CREATE TABLE IF NOT EXISTS spare_offers (
 export type Team = {
   id: number; name: string; sport: string; format: "singles" | "doubles"; lines: number;
   invite_code: string; request_business_days: number; reminder_days: number; spares_days: number;
-  summary_days: number; spare_mode: "rolling" | "first_come"; spare_expiry_hours: number; auto_spares: number;
+  summary_days: number; league_id: number | null; lineup_policy: "rank" | "rotation"; spare_mode: "rolling" | "first_come"; spare_expiry_hours: number; auto_spares: number;
 };
 export type User = { id: number; email: string; name: string; phone: string; sms_opt_in: number };
 export type Game = {
   id: number; team_id: number; starts_at: string; opponent: string; location: string; notes: string;
   request_sent: number; reminder_sent: number; summary_sent: number; spares_started: number;
+  lines: number | null; matchup_id: number | null; played_recorded: number;
 };
+export type League = { id: number; name: string; organizer_id: number; courts_per_matchup: number; default_time: string };
 export type Member = User & { role: "captain" | "player" | "spare"; rank: number };

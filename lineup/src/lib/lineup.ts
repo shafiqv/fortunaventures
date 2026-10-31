@@ -10,6 +10,8 @@ export interface Candidate {
   userId: number;
   rank: number;
   status: Status;
+  /** Optional: lower plays first (used for fair rotation). Ties fall back to rank. */
+  priority?: number;
 }
 
 export interface Slot {
@@ -31,7 +33,7 @@ export function buildLineup(
   const total = lines * perLine;
   const ins = candidates
     .filter((c) => c.status === "in")
-    .sort((a, b) => a.rank - b.rank || a.userId - b.userId);
+    .sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0) || a.rank - b.rank || a.userId - b.userId);
 
   const playing = ins.slice(0, total);
   const bench = ins.slice(total).map((c) => c.userId);

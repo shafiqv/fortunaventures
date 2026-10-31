@@ -2,7 +2,10 @@ import type { User } from "./db";
 
 export const appUrl = () => (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
+export const isPlaceholderEmail = (e: string) => e.endsWith("@placeholder.invalid");
+
 export async function sendEmail(to: string, subject: string, text: string) {
+  if (isPlaceholderEmail(to)) return; // player added from a roster sheet, no email yet
   const key = process.env.RESEND_API_KEY;
   if (!key) {
     console.log(`\n[email → ${to}] ${subject}\n${text}\n`);

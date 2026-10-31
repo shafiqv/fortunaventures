@@ -129,3 +129,53 @@ export async function respondSpare(token: string, accept: boolean) {
   svc.respondToOffer(token, accept);
   revalidatePath(`/s/${token}`);
 }
+
+// ---------- organizer (league admin) ----------
+import { xlsxToText } from "@/lib/excel";
+
+async function organizerOf(leagueId: number) {
+  const u = await requireUser();
+  if (!svc.isOrganizer(leagueId, u.id)) throw new Error("Organizers only");
+  return u;
+}
+
+export async function createLeague(_: unknown, f: FormData): Promise<{ error: string }> {
+  const u = await requireUser();
+  let text = str(f, "roster");
+  const file = f.get("file");
+  if (file instanceof File && file.size) text = file.name.toLowerCase().endsWith(".xlsx") ? await xlsxToText(await file.arrayBuffer()) : await file.text();
+  if (!text) return { error: "Paste the roster from Excel, or upload the file." };
+  const r = svc.createLeagueFromRoster(u, str(f, "name") || "League", Math.max(1, num(f, "courts", 3)), str(f, "time") || "19:00", text);
+  if (!r.id) return { error: r.errors.join(" ") };
+  redirect(`/admin/leagues/${r.id}`);
+}
+
+export async function saveContacts(leagueId: number, f: FormData) {
+  await organizerOf(leagueId);
+  for (const p of svc.leaguePlayers(leagueId)) {
+    const email = str(f, `email_${p.id}`), phone = str(f, `phone_${p.id}`);
+    if (email || phone) svc.setContact(p.id, email, phone);
+  }
+  revalidatePath(`/admin/leagues/${leagueId}`);
+}
+
+export async function createRound(leagueId: number, f: FormData) {
+  await organizerOf(leagueId);
+  const league = svc.getLeague(leagueId)!;
+  const ms = [0, 1, 2, 3].map((i) => ({ a: num(f, `a${i}`, 0), b: num(f, `b${i}`, 0), time: str(f, `t${i}`) || league.default_time, courts: Math.max(1, num(f, `c${i}`, league.courts_per_matchup)) }));
+  svc.createRound(league, str(f, "date"), ms);
+  revalidatePath(`/admin/leagues/${leagueId}`);
+}
+
+export async function editMatchup(leagueId: number, matchupId: number, f: FormData) {
+  await organizerOf(leagueId);
+  svc.updateMatchup(matchupId, str(f, "time"), Math.max(1, num(f, "courts", 3)));
+  revalidatePath(`/admin/leagues/${leagueId}`);
+}
+
+export async function publishRound(leagueId: number, day: string) {
+  await organizerOf(leagueId);
+  const games = db().prepare("SELECT g.* FROM games g JOIN teams t ON t.id=g.team_id WHERE t.league_id=? AND substr(g.starts_at,1,10)=?").all(leagueId, day) as import("@/lib/db").Game[];
+  for (const g of games) { await svc.sendRequests(g, false); db().prepare("UPDATE games SET request_sent=1 WHERE id=?").run(g.id); }
+  revalidatePath(`/admin/leagues/${leagueId}`);
+}
