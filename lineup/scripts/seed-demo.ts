@@ -5,10 +5,22 @@
  */
 process.env.DATABASE_PATH ??= "./data/demo.db";
 import fs from "node:fs";
+import Database from "better-sqlite3";
 import { db, type User } from "../src/lib/db";
 import * as svc from "../src/lib/service";
 import { fmtLocal } from "../src/lib/dates";
 
+// Safety: this script WIPES the database. Refuse if it holds anything other than demo data.
+if (fs.existsSync(process.env.DATABASE_PATH!)) {
+  const probe = new Database(process.env.DATABASE_PATH!, { readonly: true, fileMustExist: true });
+  let real = 0;
+  try { real = (probe.prepare("SELECT COUNT(*) c FROM users WHERE email NOT LIKE '%@example.com' AND email NOT LIKE '%@placeholder.invalid'").get() as { c: number }).c; } catch { /* empty/new db */ }
+  probe.close();
+  if (real > 0 && process.env.SEED_WIPE !== "1") {
+    console.error(`Refusing to wipe ${process.env.DATABASE_PATH}: it contains ${real} real (non-example.com) user(s). Set SEED_WIPE=1 to override.`);
+    process.exit(1);
+  }
+}
 for (const ext of ["", "-wal", "-shm"]) fs.rmSync(process.env.DATABASE_PATH + ext, { force: true });
 
 let seed = 20261031;

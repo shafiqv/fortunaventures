@@ -9,7 +9,8 @@
     "test": "TZ=America/Toronto tsx --test test/*.test.ts",
     "tick": "TZ=America/Toronto tsx scripts/tick.ts",
     "seed:demo": "TZ=America/Toronto DATABASE_PATH=./data/demo.db tsx scripts/seed-demo.ts",
-    "demo": "TZ=America/Toronto DATABASE_PATH=./data/demo.db next dev"
+    "demo": "TZ=America/Toronto DATABASE_PATH=./data/demo.db next dev",
+    "seed": "TZ=America/Toronto tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.5.0",

@@ -20,7 +20,8 @@ export async function requestLogin(emailRaw: string): Promise<{ ok: boolean; dev
     .run(sha(token), email, Date.now() + 20 * 60_000);
   const link = `${appUrl()}/auth/verify?token=${token}`;
   await sendEmail(email, "Your Lineup sign-in link", `Click to sign in (expires in 20 minutes):\n\n${link}\n\nIf you didn't ask for this, ignore this email.`);
-  return { ok: true, devLink: process.env.NODE_ENV === "production" ? null : link };
+  // SHOW_LOGIN_LINK=1 is for a throwaway demo site only: it shows the sign-in link on screen instead of requiring email.
+  return { ok: true, devLink: process.env.NODE_ENV !== "production" || process.env.SHOW_LOGIN_LINK === "1" ? link : null };
 }
 
 /** Consume a login token; returns the user (created if new) or null. */
