@@ -21,6 +21,13 @@ export function db(): Database.Database {
     "ALTER TABLE games ADD COLUMN played_recorded INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE responses ADD COLUMN played INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE members ADD COLUMN seed INTEGER NOT NULL DEFAULT 1000",
+    "ALTER TABLE results ADD COLUMN s1f INTEGER",
+    "ALTER TABLE results ADD COLUMN s1a INTEGER",
+    "ALTER TABLE results ADD COLUMN s2f INTEGER",
+    "ALTER TABLE results ADD COLUMN s2a INTEGER",
+    "ALTER TABLE results ADD COLUMN s3f INTEGER",
+    "ALTER TABLE results ADD COLUMN s3a INTEGER",
+    "ALTER TABLE results ADD COLUMN s3_tb INTEGER NOT NULL DEFAULT 1",
   ]) { try { d.exec(sql); } catch { /* column already exists */ } }
   g.__db = d;
   return d;
@@ -103,6 +110,14 @@ CREATE TABLE IF NOT EXISTS results (
   against_score INTEGER NOT NULL,
   p1 INTEGER, p2 INTEGER,               -- who actually played this court (snapshot when the score is saved)
   PRIMARY KEY (game_id, court)
+);
+CREATE TABLE IF NOT EXISTS attendance_events (
+  id INTEGER PRIMARY KEY,
+  game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL,                   -- late_cancel | no_show
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (game_id, user_id, kind)
 );
 CREATE TABLE IF NOT EXISTS spare_offers (
   id INTEGER PRIMARY KEY,

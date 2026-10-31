@@ -7,7 +7,27 @@
  * Matchups are processed chronologically; within a matchup all courts use the ratings from before that night.
  */
 export interface CourtResult { a: number[]; b: number[]; aScore: number; bScore: number }
-export interface Rated { rating: number; games: number }
+export interface Rated { rating: number; games: number; skill?: number; penalty?: number; lateCancels?: number; noShows?: number }
+
+/**
+ * Games won/lost on a court from best-of-3 sets. The 3rd set is normally a 10-point match tie-break,
+ * which counts as ONE game for the winner (unless all four agreed to play a full third set).
+ */
+export function gamesFromSets(sets: [number, number][], thirdIsTiebreak: boolean) {
+  let f = 0, a = 0;
+  sets.forEach(([x, y], i) => {
+    if (i === 2 && thirdIsTiebreak) { if (x > y) f += 1; else if (y > x) a += 1; }
+    else { f += x; a += y; }
+  });
+  return { for: f, against: a };
+}
+
+/** Reliability: the first late cancellation and the first no-show are warnings; repeats cost rating. */
+export const LATE_CANCEL_PENALTY = 15;
+export const NO_SHOW_PENALTY = 40;
+export function reliabilityPenalty(lateCancels: number, noShows: number) {
+  return Math.max(0, lateCancels - 1) * LATE_CANCEL_PENALTY + Math.max(0, noShows - 1) * NO_SHOW_PENALTY;
+}
 
 export const START_RATING = 1000;
 

@@ -120,7 +120,7 @@ export async function gameAction(teamId: number, gameId: number, action: "reques
 export async function respond(token: string, status: Status) {
   const r = db().prepare("SELECT game_id, user_id FROM responses WHERE token=?").get(token) as { game_id: number; user_id: number } | undefined;
   if (!r || !["in", "out", "maybe"].includes(status)) return;
-  svc.setStatus(r.game_id, r.user_id, status);
+  svc.setStatus(r.game_id, r.user_id, status, true); // player's own answer: late cancels are tracked
   svc.runSparesLater(r.game_id);
   revalidatePath(`/r/${token}`);
 }
@@ -211,13 +211,25 @@ export async function addSubAction(teamId: number, gameId: number, f: FormData) 
 
 export async function saveResultsAction(teamId: number, gameId: number, courts: number, f: FormData) {
   await captainOf(teamId);
-  const scores: { court: number; forScore: number; againstScore: number }[] = [];
+  const n = (k: string) => { const v = f.get(k); return v === null || v === "" ? null : Math.max(0, Math.round(Number(v))); };
+  const scores: svc.CourtScore[] = [];
   for (let c = 1; c <= courts; c++) {
-    const a = f.get(`for_${c}`), b = f.get(`against_${c}`);
-    if (a === null || b === null || a === "" || b === "") continue;
-    scores.push({ court: c, forScore: Math.max(0, Number(a)), againstScore: Math.max(0, Number(b)) });
+    const sets: [number, number][] = [];
+    for (const i of [1, 2, 3]) {
+      const x = n(`s${i}f_${c}`), y = n(`s${i}a_${c}`);
+      if (x !== null && y !== null) sets.push([x, y]);
+    }
+    if (sets.length) scores.push({ court: c, sets, tiebreak: !f.get(`full3_${c}`) });
   }
   if (scores.length) svc.saveResults(gameId, scores);
+  const { rows } = svc.gameState(gameId);
+  svc.setNoShows(gameId, rows.filter((r) => f.get(`noshow_${r.user_id}`)).map((r) => r.user_id));
+  revalidatePath(`/teams/${teamId}/games/${gameId}`);
+}
+
+export async function forgiveEvent(teamId: number, gameId: number, eventId: number) {
+  await captainOf(teamId);
+  svc.deleteEvent(eventId);
   revalidatePath(`/teams/${teamId}/games/${gameId}`);
 }
 

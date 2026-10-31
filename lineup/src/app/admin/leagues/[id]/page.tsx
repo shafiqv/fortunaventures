@@ -112,11 +112,11 @@ export default async function LeagueAdmin({ params }: { params: Promise<{ id: st
       </form>
 
       <h2>Player ratings</h2>
-      <div className="card"><table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>Rating</th><th>Matches</th></tr></thead><tbody>
+      <div className="card"><table><thead><tr><th>#</th><th>Player</th><th>Team</th><th>Rating</th><th>Matches</th><th>Late cancels</th><th>No-shows</th></tr></thead><tbody>
         {ranked.map((p, i) => { const r = ratings.get(p.id); return (
-          <tr key={p.id}><td>{i + 1}</td><td>{p.name}</td><td className="mute">{p.team}</td><td><b>{Math.round(r?.rating ?? p.seed)}</b></td><td className="mute">{r?.games ?? 0}</td></tr>); })}
+          <tr key={p.id}><td>{i + 1}</td><td>{p.name}</td><td className="mute">{p.team}</td><td><b>{Math.round(r?.rating ?? p.seed)}</b></td><td className="mute">{r?.games ?? 0}</td><td className="mute">{r?.lateCancels ?? 0}</td><td className="mute">{r?.noShows ?? 0}{r?.penalty ? <span className="out"> (−{r.penalty} rating)</span> : null}</td></tr>); })}
       </tbody></table>
-      <p className="mute">Ratings start from the number above (default 1000) and move after every scored court, based on the score, your partner's rating and your opponents' ratings.</p></div>
+      <p className="mute">Ratings start from the number above (default 1000) and move after every scored court, based on games won, your partner's rating and your opponents' ratings. The first late cancellation (within 48h) and first no-show are warnings; repeats lower the rating used for court order (−15 and −40 each).</p></div>
 
       <h2>Teams</h2>
       {teams.map((t) => <div key={t.id} className="card row"><Link className="grow" href={`/teams/${t.id}`}>{t.name}</Link><span className="mute">invite link: /join/{t.invite_code}</span></div>)}

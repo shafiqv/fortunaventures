@@ -88,11 +88,33 @@ export function responsesFor(gameId: number): (ResponseRow & { name: string; ema
   ).all(g.team_id, gameId) as never;
 }
 
-export function setStatus(gameId: number, userId: number, status: Status) {
-  db().prepare(
+/** Set a player's availability. With `track`, a player (not the captain) cancelling within 48h of a game they'd committed to is logged as a late cancellation. */
+export function setStatus(gameId: number, userId: number, status: Status, track = false) {
+  const d = db();
+  if (track && status === "out") {
+    const g = getGame(gameId);
+    const prev = (d.prepare("SELECT status FROM responses WHERE game_id=? AND user_id=?").get(gameId, userId) as { status: string } | undefined)?.status;
+    const placed = !!d.prepare("SELECT 1 FROM lineup_slots WHERE game_id=? AND user_id=?").get(gameId, userId);
+    const hours = g ? (parseLocal(g.starts_at).getTime() - Date.now()) / 3600_000 : 999;
+    if (g && (prev === "in" || placed) && hours < 48 && hours > 0)
+      d.prepare("INSERT OR IGNORE INTO attendance_events (game_id,user_id,kind) VALUES (?,?, 'late_cancel')").run(gameId, userId);
+  }
+  d.prepare(
     `INSERT INTO responses (game_id, user_id, status, token) VALUES (?,?,?,?)
      ON CONFLICT(game_id,user_id) DO UPDATE SET status=excluded.status, updated_at=datetime('now')`,
   ).run(gameId, userId, status, newToken());
+}
+
+export const eventsFor = (gameId: number) =>
+  db().prepare("SELECT e.id, e.kind, u.name, u.email, e.user_id FROM attendance_events e JOIN users u ON u.id=e.user_id WHERE e.game_id=? ORDER BY e.id").all(gameId) as
+    { id: number; kind: string; name: string; email: string; user_id: number }[];
+export const deleteEvent = (id: number) => void db().prepare("DELETE FROM attendance_events WHERE id=?").run(id);
+
+/** Organizer marks who didn't show for a game (replaces the previous no-show list for that game). */
+export function setNoShows(gameId: number, userIds: number[]) {
+  const d = db();
+  d.prepare("DELETE FROM attendance_events WHERE game_id=? AND kind='no_show'").run(gameId);
+  for (const u of userIds) d.prepare("INSERT OR IGNORE INTO attendance_events (game_id,user_id,kind) VALUES (?,?, 'no_show')").run(gameId, u);
 }
 
 export function gameState(gameId: number) {
@@ -159,11 +181,30 @@ export function leagueRatings(leagueId: number) {
       return { a: [a.p1, a.p2].filter(Boolean) as number[], b: b ? ([b.p1, b.p2].filter(Boolean) as number[]) : [], aScore: a.for_score, bScore: a.against_score };
     }));
   }
-  return computeRatings(seeds, matchups);
+  const skill = computeRatings(seeds, matchups);
+  // reliability: repeat late cancels / no-shows lower the effective rating (skill itself stays pure for opponents' expectations)
+  const counts = new Map<number, { lc: number; ns: number }>();
+  for (const e of d.prepare(
+    `SELECT e.user_id u, e.kind k FROM attendance_events e JOIN games g ON g.id=e.game_id JOIN teams t ON t.id=g.team_id WHERE t.league_id=?`,
+  ).all(leagueId) as { u: number; k: string }[]) {
+    const c = counts.get(e.u) ?? { lc: 0, ns: 0 };
+    if (e.k === "late_cancel") c.lc++; else c.ns++;
+    counts.set(e.u, c);
+  }
+  const out = new Map<number, Rated>();
+  for (const [uid, seed] of seeds) {
+    const sk = skill.get(uid) ?? { rating: seed, games: 0 };
+    const c = counts.get(uid) ?? { lc: 0, ns: 0 };
+    const penalty = reliabilityPenalty(c.lc, c.ns);
+    out.set(uid, { rating: sk.rating - penalty, skill: sk.rating, games: sk.games, penalty, lateCancels: c.lc, noShows: c.ns });
+  }
+  return out;
 }
 
-/** Save court scores from one team's point of view; mirror them (swapped) onto the opposing team's game. Snapshots who played. */
-export function saveResults(gameId: number, scores: { court: number; forScore: number; againstScore: number }[]) {
+export interface CourtScore { court: number; sets: [number, number][]; tiebreak: boolean }
+
+/** Save court scores (best of 3 sets, our games first) from one team's point of view; mirror them (swapped) to the opposing game. Snapshots who played. */
+export function saveResults(gameId: number, scores: CourtScore[]) {
   const d = db();
   const g = getGame(gameId)!;
   const sib = g.matchup_id ? (d.prepare("SELECT id FROM games WHERE matchup_id=? AND id!=?").get(g.matchup_id, gameId) as { id: number } | undefined) : undefined;
@@ -173,17 +214,25 @@ export function saveResults(gameId: number, scores: { court: number; forScore: n
     return (court: number) => lineup.slots.filter((s) => s.line === court).slice(0, per).map((s) => s.userId);
   };
   const mine = snap(gameId), theirs = sib ? snap(sib.id) : () => [null, null];
-  const ins = d.prepare("INSERT OR REPLACE INTO results (game_id,court,for_score,against_score,p1,p2) VALUES (?,?,?,?,?,?)");
+  const ins = d.prepare(
+    `INSERT OR REPLACE INTO results (game_id,court,for_score,against_score,p1,p2,s1f,s1a,s2f,s2a,s3f,s3a,s3_tb) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  );
+  const row = (gid: number, s: CourtScore, ps: (number | null)[], swap: boolean) => {
+    const sets = s.sets.map(([x, y]) => (swap ? [y, x] : [x, y])) as [number, number][];
+    const gm = gamesFromSets(sets, s.tiebreak);
+    const [t1, t2, t3] = [sets[0], sets[1], sets[2]];
+    ins.run(gid, s.court, gm.for, gm.against, ps[0] ?? null, ps[1] ?? null, t1?.[0] ?? null, t1?.[1] ?? null, t2?.[0] ?? null, t2?.[1] ?? null, t3?.[0] ?? null, t3?.[1] ?? null, s.tiebreak ? 1 : 0);
+  };
   d.transaction(() => {
     for (const s of scores) {
-      const [a1, a2] = mine(s.court);
-      ins.run(gameId, s.court, s.forScore, s.againstScore, a1 ?? null, a2 ?? null);
-      if (sib) { const [b1, b2] = theirs(s.court); ins.run(sib.id, s.court, s.againstScore, s.forScore, b1 ?? null, b2 ?? null); }
+      row(gameId, s, mine(s.court), false);
+      if (sib) row(sib.id, s, theirs(s.court), true);
     }
   })();
 }
 export const resultsFor = (gameId: number) =>
-  db().prepare("SELECT court, for_score, against_score FROM results WHERE game_id=? ORDER BY court").all(gameId) as { court: number; for_score: number; against_score: number }[];
+  db().prepare("SELECT court, for_score, against_score, s1f, s1a, s2f, s2a, s3f, s3a, s3_tb FROM results WHERE game_id=? ORDER BY court").all(gameId) as
+    { court: number; for_score: number; against_score: number; s1f: number | null; s1a: number | null; s2f: number | null; s2a: number | null; s3f: number | null; s3a: number | null; s3_tb: number }[];
 
 // ---------- manual lineups ----------
 export const hasManualLineup = (gameId: number) => !!db().prepare("SELECT 1 FROM lineup_slots WHERE game_id=? LIMIT 1").get(gameId);
@@ -355,7 +404,7 @@ export function runSparesLater(gameId: number) {
 // ---------- leagues (organizer layer) ----------
 import { parseRoster } from "./roster";
 import { generateSeason } from "./season";
-import { computeRatings, START_RATING, type CourtResult } from "./ratings";
+import { computeRatings, gamesFromSets, reliabilityPenalty, START_RATING, type CourtResult, type Rated } from "./ratings";
 import { isPlaceholderEmail } from "./notify";
 import type { League } from "./db";
 

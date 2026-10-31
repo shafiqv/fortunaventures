@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
-import { addSubAction, captainSetStatus, deleteGame, gameAction, lineupMode, saveGame, saveLineupAction, saveResultsAction } from "../../../../actions";
+import { addSubAction, captainSetStatus, deleteGame, forgiveEvent, gameAction, lineupMode, saveGame, saveLineupAction, saveResultsAction } from "../../../../actions";
 import type { Status } from "@/lib/lineup";
 
 export default async function GamePage({ params }: { params: Promise<{ id: string; gid: string }> }) {
@@ -19,6 +19,7 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
   const [date, time] = game.starts_at.split("T");
   const rated = svc.ratingsForTeam(team);
   const saved = svc.resultsFor(gameId);
+  const events = svc.eventsFor(gameId);
   const courts = lineup.total / (team.format === "doubles" ? 2 : 1);
   const act = (a: "request" | "remind" | "spares" | "summary") => gameAction.bind(null, teamId, gameId, a);
 
@@ -66,15 +67,28 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
       {team.league_id && game.matchup_id && (<>
         <h2>Results</h2>
         <form action={saveResultsAction.bind(null, teamId, gameId, courts)} className="card">
-          <p className="mute">Enter the score for each court (ours vs theirs). This updates player ratings, which set next week's court order.</p>
+          <p className="mute">Best of 3 sets, our games first. The 3rd set is a 10-point match tie-break (enter e.g. 10–7) unless all four agreed to play a full set — tick the box then. Scores update ratings, which set next week's court order.</p>
           <table><tbody>{Array.from({ length: courts }, (_, i) => {
-            const r = saved.find((x) => x.court === i + 1);
-            return (<tr key={i}><td>Court {i + 1}</td>
-              <td><input name={`for_${i + 1}`} type="number" min={0} defaultValue={r?.for_score} style={{ width: 70 }} /></td><td>–</td>
-              <td><input name={`against_${i + 1}`} type="number" min={0} defaultValue={r?.against_score} style={{ width: 70 }} /></td></tr>);
+            const c = i + 1;
+            const r = saved.find((x) => x.court === c);
+            const pair = lineup.slots.filter((x) => x.line === c).map((x) => nm(x.userId));
+            const inp = (k: string, v: number | null | undefined) => <input name={`${k}_${c}`} type="number" min={0} defaultValue={v ?? undefined} style={{ width: 56 }} />;
+            return (<tr key={c}><td style={{ whiteSpace: "nowrap" }}>Court {c}<div className="mute">{pair.map((p, k) => <span key={k}>{k > 0 && " / "}{p}</span>)}</div></td>
+              <td>{inp("s1f", r?.s1f)} – {inp("s1a", r?.s1a)}</td>
+              <td>{inp("s2f", r?.s2f)} – {inp("s2a", r?.s2a)}</td>
+              <td>{inp("s3f", r?.s3f)} – {inp("s3a", r?.s3a)} <label style={{ display: "inline-flex", gap: 4, alignItems: "center", margin: 0 }}><input type="checkbox" name={`full3_${c}`} defaultChecked={r ? !r.s3_tb : false} style={{ width: "auto" }} />full set</label></td></tr>);
           })}</tbody></table>
+          <h3>No-shows</h3>
+          <p className="mute">Tick anyone scheduled who didn't turn up. The first is a warning; repeats lower their rating.</p>
+          <div className="row">{rows.filter((r) => lineup.slots.some((x) => x.userId === r.user_id) || events.some((e) => e.user_id === r.user_id && e.kind === "no_show")).map((r) => (
+            <label key={r.user_id} style={{ display: "inline-flex", gap: 4, alignItems: "center", margin: 0 }}><input type="checkbox" name={`noshow_${r.user_id}`} defaultChecked={events.some((e) => e.user_id === r.user_id && e.kind === "no_show")} style={{ width: "auto" }} />{r.name || r.email}</label>
+          ))}</div>
           <p><button>Save results</button></p>
         </form></>)}
+      {events.some((e) => e.kind === "late_cancel") && (<div className="card"><b>Late cancellations (within 48h)</b>
+        {events.filter((e) => e.kind === "late_cancel").map((e) => (
+          <form key={e.id} action={forgiveEvent.bind(null, teamId, gameId, e.id)} className="row" style={{ marginTop: 6 }}><span className="grow">{e.name || e.email}</span><button className="ghost">Forgive</button></form>
+        ))}</div>)}
 
       <h2>Availability</h2>
       <div className="card"><table><tbody>

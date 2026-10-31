@@ -170,8 +170,13 @@ test("league e2e: scores mirror to opponent, ratings change, next week court 1 =
   for (const m of mb) svc.setStatus(gB1.id, m.id, "in");
   svc.saveLineup(gA1.id, ma.slice(0, 6).map((m) => m.id));
   svc.saveLineup(gB1.id, mb.slice(0, 6).map((m) => m.id));
-  svc.saveResults(gA1.id, [{ court: 1, forScore: 6, againstScore: 1 }, { court: 2, forScore: 6, againstScore: 2 }, { court: 3, forScore: 5, againstScore: 6 }]);
-  assert.equal(svc.resultsFor(gB1.id)[0].for_score, 1); // mirrored & swapped
+  svc.saveResults(gA1.id, [
+    { court: 1, sets: [[6, 0], [6, 1]], tiebreak: true },
+    { court: 2, sets: [[6, 2], [6, 3]], tiebreak: true },
+    { court: 3, sets: [[5, 7], [6, 4], [8, 10]], tiebreak: true }, // lost the match tie-break
+  ]);
+  assert.equal(svc.resultsFor(gB1.id)[0].for_score, 1); // mirrored & swapped (6-0 6-1 → 1 game for them)
+  assert.equal(svc.resultsFor(gB1.id)[0].s1f, 0);
   const ratings = svc.leagueRatings(id);
   assert.ok(ratings.get(ma[0].id)!.rating > 1000, "court-1 winners go up");
   assert.ok(ratings.get(mb[0].id)!.rating < 1000, "court-1 losers go down");
@@ -187,4 +192,52 @@ test("league e2e: scores mirror to opponent, ratings change, next week court 1 =
   for (const b of benchedLastTime) assert.ok(st.lineup.slots.some((s) => s.userId === b), "benched players play next");
   const order = st.lineup.slots.map((s) => ratings.get(s.userId!)?.rating ?? 1000);
   assert.deepEqual(order, [...order].sort((x, y) => y - x), "court order follows rating");
+});
+
+import { gamesFromSets, reliabilityPenalty } from "../src/lib/ratings";
+test("scoring: match tie-break counts as one game; full third set counts all games", () => {
+  assert.deepEqual(gamesFromSets([[6, 4], [4, 6], [10, 7]], true), { for: 11, against: 10 });
+  assert.deepEqual(gamesFromSets([[6, 4], [4, 6], [7, 5]], false), { for: 17, against: 15 });
+  assert.deepEqual(gamesFromSets([[6, 3], [6, 2]], true), { for: 12, against: 5 });
+});
+
+test("reliability: first late cancel / no-show is a warning, repeats cost rating", () => {
+  assert.equal(reliabilityPenalty(0, 0), 0);
+  assert.equal(reliabilityPenalty(1, 1), 0);
+  assert.equal(reliabilityPenalty(3, 0), 30);
+  assert.equal(reliabilityPenalty(1, 2), 40);
+});
+
+test("late cancellation is tracked only for committed players cancelling inside 48h; flows into effective rating", () => {
+  const org = db().prepare("INSERT INTO users (email,name) VALUES ('o4@x.com','O4') RETURNING *").get() as User;
+  const { id } = svc.createLeagueFromRoster(org, "L4", 3, "19:00", SHEET);
+  const [A, B] = svc.leagueTeams(id);
+  const lg = svc.getLeague(id)!;
+  const soon = new Date(Date.now() + 30 * 3600_000), later = new Date(Date.now() + 10 * 86400_000);
+  const day = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  svc.createRound(lg, day(soon), [{ a: A.id, b: B.id, time: hhmm(soon), courts: 3 }]);
+  svc.createRound(lg, day(later), [{ a: A.id, b: B.id, time: hhmm(later), courts: 3 }]);
+  const r = svc.leagueRounds(id);
+  const near = r[0].matchups[0].games.find((g) => g.team_id === A.id)!, far = r[1].matchups[0].games.find((g) => g.team_id === A.id)!;
+  const m = svc.membersOf(A.id);
+  // never said "in" → no penalty event
+  svc.setStatus(near.id, m[0].id, "out", true);
+  assert.equal(svc.eventsFor(near.id).length, 0);
+  // said "in", then cancels within 48h → event
+  svc.setStatus(near.id, m[1].id, "in", true);
+  svc.setStatus(near.id, m[1].id, "out", true);
+  assert.equal(svc.eventsFor(near.id).filter((e) => e.kind === "late_cancel").length, 1);
+  // cancelling 10 days ahead is fine
+  svc.setStatus(far.id, m[2].id, "in", true);
+  svc.setStatus(far.id, m[2].id, "out", true);
+  assert.equal(svc.eventsFor(far.id).length, 0);
+  // first offence = warning only; second one costs rating
+  assert.equal(svc.leagueRatings(id).get(m[1].id)!.penalty, 0);
+  svc.setNoShows(near.id, [m[1].id]);
+  assert.equal(svc.leagueRatings(id).get(m[1].id)!.penalty, 0); // first no-show: warning
+  svc.setNoShows(far.id, [m[1].id]);
+  const rr = svc.leagueRatings(id).get(m[1].id)!;
+  assert.equal(rr.penalty, 40);
+  assert.equal(rr.rating, rr.skill! - 40);
 });
