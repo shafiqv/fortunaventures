@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "TZ=America/Toronto next dev",
+    "dev": "cross-env TZ=America/Toronto next dev",
     "build": "next build",
-    "start": "TZ=America/Toronto next start",
-    "test": "TZ=America/Toronto tsx --test test/*.test.ts",
-    "tick": "TZ=America/Toronto tsx scripts/tick.ts",
-    "seed:demo": "TZ=America/Toronto DATABASE_PATH=./data/demo.db tsx scripts/seed-demo.ts",
-    "demo": "TZ=America/Toronto DATABASE_PATH=./data/demo.db next dev",
-    "seed": "TZ=America/Toronto tsx scripts/seed-demo.ts"
+    "start": "cross-env TZ=America/Toronto next start",
+    "test": "cross-env TZ=America/Toronto tsx --test test/*.test.ts",
+    "tick": "cross-env TZ=America/Toronto tsx scripts/tick.ts",
+    "seed:demo": "cross-env TZ=America/Toronto DATABASE_PATH=./data/demo.db tsx scripts/seed-demo.ts",
+    "demo": "cross-env TZ=America/Toronto DATABASE_PATH=./data/demo.db next dev",
+    "seed": "cross-env TZ=America/Toronto tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.5.0",
@@ -23,6 +23,7 @@
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
+    "cross-env": "^10.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }
