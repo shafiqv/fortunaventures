@@ -12,7 +12,7 @@ function fold(line: string) {
 
 /** Build an iCalendar file. Times are converted to UTC so phones show the right local time anywhere. */
 export function buildIcs(team: Pick<Team, "name">, games: Game[], calName: string, appUrl: string) {
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Lineup//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Donalda Racquets//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
     `X-WR-CALNAME:${esc(calName)}`, "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H"];
   for (const g of games) {
     const start = parseLocal(g.starts_at);
@@ -23,7 +23,7 @@ export function buildIcs(team: Pick<Team, "name">, games: Game[], calName: strin
       `DTSTART:${utc(start)}`,
       `DTEND:${utc(end)}`,
       `SUMMARY:${esc(`${team.name}${g.opponent ? ` vs ${g.opponent}` : ""}`)}`,
-      ...(g.location ? [`LOCATION:${esc(g.location)}`] : []),
+      ...(g.location || g.address ? [`LOCATION:${esc([g.location, g.address].filter(Boolean).join(", "))}`] : []),
       `DESCRIPTION:${esc(`${g.notes ? g.notes + "\n" : ""}Availability & lineup: ${appUrl}`)}`,
       "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", `DESCRIPTION:${esc(team.name + " match")}`, "END:VALARM",
       "END:VEVENT");

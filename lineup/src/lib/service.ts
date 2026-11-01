@@ -1,6 +1,7 @@
 import { db, type Game, type Member, type Team, type User } from "./db";
 import { newToken } from "./auth";
-import { appUrl, notifyUser } from "./notify";
+import { appUrl, notifyUser, sendEmail } from "./notify";
+import { APP_NAME } from "./brand";
 import { buildLineup, spotsNeeded, type Status } from "./lineup";
 import { nextToOffer, type Offer } from "./spares";
 import { businessDaysBefore, daysBefore, fmtLocal, parseLocal, prettyWhen } from "./dates";
@@ -54,7 +55,7 @@ export async function inviteByEmail(team: Team, email: string) {
   const u = db().prepare("SELECT * FROM users WHERE email=?").get(email) as User;
   joinTeam(team.id, u.id);
   await notifyUser(u, `You've been added to ${team.name}`,
-    `You've been added to ${team.name} on Lineup. Sign in with this email address to set your phone/text preferences:\n${appUrl()}`);
+    `You've been added to ${team.name} on ${APP_NAME}. Sign in with this email address to set your phone/text preferences:\n${appUrl()}`);
 }
 
 // ---------- games ----------
@@ -322,9 +323,44 @@ export function addSub(gameId: number, name: string, email: string) {
   return u.id;
 }
 
+// ---------- announcements (broadcasts) ----------
+/** Send a message to every member of the given teams (deduped). Email always; text only when marked urgent and the person opted in. */
+export async function sendBroadcast(author: User, scope: { teamId?: number; leagueId?: number }, subject: string, body: string, urgent: boolean) {
+  const d = db();
+  const teamIds = scope.leagueId ? leagueTeams(scope.leagueId).map((t) => t.id) : scope.teamId ? [scope.teamId] : [];
+  const people = new Map<number, User>();
+  for (const t of teamIds) for (const m of membersOf(t)) people.set(m.id, m);
+  const label = scope.leagueId ? getLeague(scope.leagueId)?.name : getTeam(scope.teamId!)?.name;
+  const text = `${body}\n\n— ${author.name || author.email}, ${label}\n${appUrl()}`;
+  let n = 0;
+  for (const u of people.values()) {
+    if (urgent) await notifyUser(u, `${label}: ${subject}`, text, `${label}: ${subject} — ${body}`.slice(0, 300));
+    else await sendEmail(u.email, `${label}: ${subject}`, text);
+    n++;
+  }
+  d.prepare("INSERT INTO broadcasts (team_id, league_id, author_id, subject, body, urgent, recipients) VALUES (?,?,?,?,?,?,?)")
+    .run(scope.teamId ?? null, scope.leagueId ?? null, author.id, subject, body, urgent ? 1 : 0, n);
+  return n;
+}
+
+/** Announcements a member should see on a team page: team-level ones plus league-wide ones. */
+export const announcementsFor = (teamId: number) =>
+  db().prepare(
+    `SELECT b.id, b.subject, b.body, b.created_at, b.urgent, COALESCE(u.name, '') AS author FROM broadcasts b
+     LEFT JOIN users u ON u.id=b.author_id
+     WHERE b.team_id=? OR b.league_id=(SELECT league_id FROM teams WHERE id=?)
+     ORDER BY b.id DESC LIMIT 5`,
+  ).all(teamId, teamId) as { id: number; subject: string; body: string; created_at: string; urgent: number; author: string }[];
+
+export function answerCounts(gameId: number) {
+  const { rows, lineup } = gameState(gameId);
+  return { in: rows.filter((r) => r.status === "in").length, out: rows.filter((r) => r.status === "out").length,
+    maybe: rows.filter((r) => r.status === "maybe").length, none: rows.filter((r) => r.status === "none").length, shortage: lineup.shortage };
+}
+
 // ---------- outbound messages ----------
 function gameLine(g: Game) {
-  return `${prettyWhen(g.starts_at)} vs ${g.opponent || "TBD"}${g.location ? ` @ ${g.location}` : ""}`;
+  return `${prettyWhen(g.starts_at)} vs ${g.opponent || "TBD"}${g.location ? ` @ ${g.location}` : ""}${g.address ? ` (${g.address})` : ""}`;
 }
 
 async function sendAvailabilityRequest(team: Team, game: Game, user: User, token: string, reminder: boolean) {

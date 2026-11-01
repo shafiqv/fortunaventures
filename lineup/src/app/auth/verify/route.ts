@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { consumeLogin, startSession } from "@/lib/auth";
+import { APP_NAME } from "@/lib/brand";
 
 // Magic link landing. Requires a confirming POST so email-scanner prefetches can't burn the one-time token.
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token") ?? "";
   const html = `<!doctype html><meta name=viewport content="width=device-width,initial-scale=1"><body style="font:16px system-ui;max-width:420px;margin:15vh auto;padding:16px">
-  <h2>Sign in to Lineup</h2><form method="post"><input type="hidden" name="token" value="${token.replace(/[^\w-]/g, "")}">
+  <h2>Sign in to ${APP_NAME}</h2><form method="post"><input type="hidden" name="token" value="${token.replace(/[^\w-]/g, "")}">
   <button style="font:inherit;padding:12px 18px">Continue</button></form>`;
   return new NextResponse(html, { headers: { "content-type": "text/html" } });
 }

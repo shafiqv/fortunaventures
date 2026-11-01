@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { appUrl } from "@/lib/notify";
 import { prettyWhen } from "@/lib/dates";
-import { inviteMembers, saveGame, saveTeamSettings, updateMember } from "../../actions";
+import { broadcastTeam, inviteMembers, saveGame, saveTeamSettings, updateMember } from "../../actions";
 import ImportForm from "../../ImportForm";
 import CalendarCta from "../../CalendarCta";
 
@@ -25,6 +25,13 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
       {team.league_id && <p><Link href={`/league/${team.league_id}`}>🏆 League standings →</Link></p>}
       <CalendarCta teamId={id} calToken={svc.calToken(user.id)} />
 
+      {svc.announcementsFor(id).length > 0 && (<>
+        <h2>Announcements</h2>
+        {svc.announcementsFor(id).map((a) => (
+          <div key={a.id} className="card"><b>{a.subject}</b> {a.urgent ? <span className="pill maybe">urgent</span> : null}
+            <div style={{ whiteSpace: "pre-wrap" }}>{a.body}</div><div className="mute">{a.author} · {a.created_at.slice(0, 10)}</div></div>
+        ))}</>)}
+
       <h2>Upcoming games</h2>
       {games.length === 0 && <p className="mute">No games yet.{cap && " Import your schedule below."}</p>}
       {games.map((g) => {
@@ -39,6 +46,14 @@ export default async function TeamPage({ params }: { params: Promise<{ id: strin
       })}
 
       {cap && (<>
+        <h2>Message the team</h2>
+        <form action={broadcastTeam.bind(null, id)} className="card">
+          <input name="subject" placeholder="Subject (e.g. Court change this Monday)" style={{ width: "100%" }} required />
+          <label>Message</label><textarea name="body" style={{ minHeight: 80, fontFamily: "inherit" }} required />
+          <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="urgent" style={{ width: "auto" }} /> Urgent: also text everyone who opted in</label>
+          <p><button>Send to {members.length} people</button></p>
+        </form>
+
         <h2>Import schedule</h2>
         <ImportForm teamId={id} />
 

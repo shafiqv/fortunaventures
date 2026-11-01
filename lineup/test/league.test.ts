@@ -270,3 +270,19 @@ test("standings count courts won; promoted bench player is notified only after l
   const after = svc.gameState(g2.id).lineup;
   assert.ok(after.slots.some((s) => s.userId === benched[0]) || after.bench.length === benched.length - 1, "a benched player moved up");
 });
+
+import { mapsUrl } from "../src/lib/maps";
+import { buildIcs } from "../src/lib/ics";
+test("broadcast reaches each person once; address feeds directions and calendar", async () => {
+  const org = db().prepare("INSERT INTO users (email,name) VALUES ('o6@x.com','O6') RETURNING *").get() as User;
+  const { id } = svc.createLeagueFromRoster(org, "L6", 3, "19:00", SHEET);
+  const n = await svc.sendBroadcast(org, { leagueId: id }, "Week 3 times", "Courts reduced; 6:30 and 8:00 starts.", false);
+  assert.equal(n, 18); // 9 + 9 players, each once
+  const [A] = svc.leagueTeams(id);
+  assert.equal(svc.announcementsFor(A.id)[0].subject, "Week 3 times"); // league-wide shows on team page
+  const m = svc.membersOf(A.id)[0];
+  db().prepare("UPDATE users SET email='dup@x.com' WHERE id=?").run(m.id);
+  assert.equal(mapsUrl("200 Lonsdale Rd, Toronto"), "https://www.google.com/maps/search/?api=1&query=200%20Lonsdale%20Rd%2C%20Toronto");
+  const ics = buildIcs({ name: "T" }, [{ id: 1, team_id: 1, starts_at: "2030-01-01T19:00", opponent: "X", location: "Away", address: "1 Main St", notes: "", request_sent: 0, reminder_sent: 0, summary_sent: 0, spares_started: 0, lines: null, matchup_id: null, played_recorded: 0 }], "T", "http://x");
+  assert.ok(ics.includes("LOCATION:Away\\, 1 Main St"));
+});

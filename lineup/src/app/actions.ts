@@ -90,8 +90,8 @@ export async function importSchedule(teamId: number, _: unknown, f: FormData): P
 export async function saveGame(teamId: number, gameId: number, f: FormData) {
   await captainOf(teamId);
   const startsAt = `${str(f, "date")}T${str(f, "time") || "19:00"}`;
-  db().prepare("UPDATE games SET starts_at=?, opponent=?, location=?, notes=? WHERE id=? AND team_id=?")
-    .run(startsAt, str(f, "opponent"), str(f, "location"), str(f, "notes"), gameId, teamId);
+  db().prepare("UPDATE games SET starts_at=?, opponent=?, location=?, address=?, notes=? WHERE id=? AND team_id=?")
+    .run(startsAt, str(f, "opponent"), str(f, "location"), str(f, "address"), str(f, "notes"), gameId, teamId);
   revalidatePath(`/teams/${teamId}`);
 }
 
@@ -237,5 +237,17 @@ export async function setLineupPolicy(leagueId: number, f: FormData) {
   await organizerOf(leagueId);
   const pol = ["rotation_rating", "rating", "rotation"].includes(str(f, "policy")) ? str(f, "policy") : "rotation_rating";
   db().prepare("UPDATE teams SET lineup_policy=? WHERE league_id=?").run(pol, leagueId);
+  revalidatePath(`/admin/leagues/${leagueId}`);
+}
+
+export async function broadcastTeam(teamId: number, f: FormData) {
+  const u = await captainOf(teamId);
+  if (str(f, "subject") && str(f, "body")) await svc.sendBroadcast(u, { teamId }, str(f, "subject"), str(f, "body"), !!f.get("urgent"));
+  revalidatePath(`/teams/${teamId}`);
+}
+
+export async function broadcastLeague(leagueId: number, f: FormData) {
+  const u = await organizerOf(leagueId);
+  if (str(f, "subject") && str(f, "body")) await svc.sendBroadcast(u, { leagueId }, str(f, "subject"), str(f, "body"), !!f.get("urgent"));
   revalidatePath(`/admin/leagues/${leagueId}`);
 }

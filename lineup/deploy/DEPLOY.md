@@ -1,4 +1,4 @@
-# Test deployment (Fly.io) — about 15 minutes
+# Test deployment of Donalda Racquets (Fly.io) — about 15 minutes
 
 You need: a Fly.io account (fly.io, credit card required, a 1-GB volume + one small machine is a few dollars/month), and `flyctl` installed
 (`brew install flyctl` or `curl -L https://fly.io/install.sh | sh`). Run everything below from the `lineup/` folder.
@@ -12,7 +12,7 @@ fly volumes create lineup_data --size 1 --region yyz
 
 ## 2. Set secrets
 ```
-fly secrets set SESSION_SECRET="$(openssl rand -hex 32)" CRON_SECRET="$(openssl rand -hex 24)"
+fly secrets set APP_NAME="Donalda Racquets" CLUB_URL="https://www.donaldaclub.ca" SESSION_SECRET="$(openssl rand -hex 32)" CRON_SECRET="$(openssl rand -hex 24)"
 # DEMO ONLY (fake data): shows the sign-in link on screen so you don't need email yet.
 # Anyone who types an email gets signed in as that person — never leave this on once real players use it.
 fly secrets set SHOW_LOGIN_LINK=1

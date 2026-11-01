@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
 import StandingsTable from "../../../StandingsTable";
-import { createRound, editMatchup, generateSeason, publishRound, saveContacts, setLineupPolicy } from "../../../actions";
+import { createRound, editMatchup, broadcastLeague, generateSeason, publishRound, saveContacts, setLineupPolicy } from "../../../actions";
 
 export default async function LeagueAdmin({ params }: { params: Promise<{ id: string }> }) {
   const id = Number((await params).id);
@@ -27,6 +27,15 @@ export default async function LeagueAdmin({ params }: { params: Promise<{ id: st
         <a className="btn" href={`/api/admin/league/${id}`}>⬇ Download Excel (rosters + lineups)</a>
         <span className="mute">{teams.length} teams · {players.length} players · {league.courts_per_matchup} courts/matchup ({league.courts_per_matchup * 2} players per team)</span>
       </div>
+
+      <h2>Message the whole league</h2>
+      <form action={broadcastLeague.bind(null, id)} className="card">
+        <p className="mute" style={{ marginTop: 0 }}>Replaces the weekly email: schedule changes, call for captains, standings notes. Goes to all {players.length} players; they also see it on their team page.</p>
+        <input name="subject" placeholder="Subject (e.g. Week 3 start times)" style={{ width: "100%" }} required />
+        <label>Message</label><textarea name="body" style={{ minHeight: 90, fontFamily: "inherit" }} required />
+        <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="urgent" style={{ width: "auto" }} /> Urgent: also text everyone who opted in</label>
+        <p><button>Send to everyone</button></p>
+      </form>
 
       <h2>How lineups are chosen</h2>
       <form action={setLineupPolicy.bind(null, id)} className="card row">

@@ -117,7 +117,8 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
       <form action={saveGame.bind(null, teamId, gameId)} className="card">
         <div className="row"><input type="date" name="date" defaultValue={date} /><input type="time" name="time" defaultValue={time} /></div>
         <label>Opponent</label><input name="opponent" defaultValue={game.opponent} />
-        <label>Location (e.g. Home, or club name & drive time)</label><input name="location" defaultValue={game.location} />
+        <label>Location (e.g. Home, or club name &amp; drive time)</label><input name="location" defaultValue={game.location} />
+        <label>Street address (powers the Directions button)</label><input name="address" defaultValue={game.address} placeholder="200 Lonsdale Rd, Toronto, ON" />
         <label>Notes</label><input name="notes" defaultValue={game.notes} />
         <p className="row"><button>Save</button></p>
       </form>

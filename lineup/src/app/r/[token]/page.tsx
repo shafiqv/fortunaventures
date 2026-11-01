@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import * as svc from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
 import { respond } from "../../actions";
+import { mapsUrl } from "@/lib/maps";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +12,19 @@ export default async function RespondPage({ params }: { params: Promise<{ token:
   if (!r) return <p>This link isn't valid anymore.</p>;
   const { game, team, rows, lineup } = svc.gameState(r.game_id);
   const ins = rows.filter((x) => x.status === "in").length;
+  const counts = svc.answerCounts(r.game_id);
   return (
     <>
       <h1>{team.name}</h1>
       <div className="card">
         <b>{prettyWhen(game.starts_at)}</b> vs {game.opponent || "TBD"}
-        <div className="mute">{game.location || "location TBD"}{game.notes && ` · ${game.notes}`}</div>
+        <div className="mute">{game.location || "location TBD"}{game.address && ` · ${game.address}`}{game.notes && ` · ${game.notes}`}</div>
+        {(game.address || game.location) && <p style={{ margin: "8px 0 0" }}><a className="btn ghost" href={mapsUrl(game.address || game.location)}>📍 Directions</a></p>}
+      </div>
+      <div className="row" style={{ justifyContent: "space-around", textAlign: "center", margin: "8px 0" }}>
+        <div><div style={{ fontSize: "2rem", fontWeight: 700 }} className="in">{counts.in}</div><div className="mute">In</div></div>
+        <div><div style={{ fontSize: "2rem", fontWeight: 700 }} className="out">{counts.out}</div><div className="mute">Out</div></div>
+        <div><div style={{ fontSize: "2rem", fontWeight: 700 }} className="none">{counts.none + counts.maybe}</div><div className="mute">No answer</div></div>
       </div>
       <p>Your answer: <b className={r.status}>{r.status === "none" ? "not answered yet" : r.status}</b></p>
       <div className="row">

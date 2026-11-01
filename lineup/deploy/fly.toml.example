@@ -5,7 +5,7 @@ primary_region = "yyz"
 [build]
 
 [env]
-  APP_URL = "https://your-domain.ca"
+  APP_URL = "https://league.donalda.club"
 
 [[mounts]]
   source = "lineup_data"

@@ -18,6 +18,7 @@ export function db(): Database.Database {
     "ALTER TABLE teams ADD COLUMN lineup_policy TEXT NOT NULL DEFAULT 'rank'",
     "ALTER TABLE games ADD COLUMN lines INTEGER",
     "ALTER TABLE games ADD COLUMN matchup_id INTEGER",
+    "ALTER TABLE games ADD COLUMN address TEXT NOT NULL DEFAULT ''",
     "ALTER TABLE games ADD COLUMN played_recorded INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE responses ADD COLUMN played INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE members ADD COLUMN seed INTEGER NOT NULL DEFAULT 1000",
@@ -119,6 +120,17 @@ CREATE TABLE IF NOT EXISTS attendance_events (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (game_id, user_id, kind)
 );
+CREATE TABLE IF NOT EXISTS broadcasts (
+  id INTEGER PRIMARY KEY,
+  team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,   -- null when sent league-wide (see league_id)
+  league_id INTEGER REFERENCES leagues(id) ON DELETE CASCADE,
+  author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  subject TEXT NOT NULL,
+  body TEXT NOT NULL,
+  urgent INTEGER NOT NULL DEFAULT 0,
+  recipients INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 CREATE TABLE IF NOT EXISTS spare_offers (
   id INTEGER PRIMARY KEY,
   game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
@@ -140,7 +152,7 @@ export type User = { id: number; email: string; name: string; phone: string; sms
 export type Game = {
   id: number; team_id: number; starts_at: string; opponent: string; location: string; notes: string;
   request_sent: number; reminder_sent: number; summary_sent: number; spares_started: number;
-  lines: number | null; matchup_id: number | null; played_recorded: number;
+  lines: number | null; matchup_id: number | null; played_recorded: number; address: string;
 };
 export type League = { id: number; name: string; organizer_id: number; courts_per_matchup: number; default_time: string };
 export type Member = User & { role: "captain" | "player" | "spare"; rank: number };
