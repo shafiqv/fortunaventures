@@ -30,7 +30,7 @@ export function consumeLogin(token: string): User | null {
     | { email: string; expires_at: number } | undefined;
   if (!row) return null;
   db().prepare("DELETE FROM login_tokens WHERE token_hash = ?").run(sha(token));
-  if (row.expires_at < Date.now()) return null;
+  if (row.expires_at < Date.now() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(row.email)) return null;
   db().prepare("INSERT OR IGNORE INTO users (email) VALUES (?)").run(row.email);
   return db().prepare("SELECT * FROM users WHERE email = ?").get(row.email) as User;
 }
