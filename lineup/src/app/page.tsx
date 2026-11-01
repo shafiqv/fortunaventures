@@ -4,6 +4,7 @@ import { db, type Team } from "@/lib/db";
 import { leaguesOf, upcomingGames } from "@/lib/service";
 import { prettyWhen } from "@/lib/dates";
 import LoginForm from "./LoginForm";
+import ClubBanner from "./ClubBanner";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ expired?: string }> }) {
   const user = await currentUser();
@@ -11,6 +12,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
   if (!user)
     return (
       <>
+        <ClubBanner />
         <h1>Team availability, without the group-chat chaos.</h1>
         <p className="mute">Captains import the schedule. Players tap In or Out. Spares are called automatically when you're short.</p>
         {sp.expired && <div className="banner">That sign-in link expired or was already used. Request a new one.</div>}
@@ -30,6 +32,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ e
 
   return (
     <>
+      <ClubBanner />
       {mine.length > 0 && (<>
         <h1>My upcoming games</h1>
         {mine.map((g) => (
